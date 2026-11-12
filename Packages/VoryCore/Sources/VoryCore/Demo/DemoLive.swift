@@ -361,7 +361,7 @@ extension DemoGateway {
         case ("POST", "reclaim"):
             guard board[i]["status"] as? String == "running" else { return (409, ["detail": "cannot reclaim \(id): not running"]) }
             board[i]["status"] = "ready"; board[i]["worker_pid"] = NSNull(); board[i]["current_run_id"] = NSNull()
-            bumpBoard(id, "reclaimed", ["reason": "reclaimed from Vory"])
+            bumpBoard(id, "reclaimed", ["reason": "reclaimed from Hermes"])
             return (200, ["ok": true, "task_id": id])
         default:
             return nil

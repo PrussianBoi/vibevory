@@ -140,7 +140,7 @@ struct FileCard: View {
     /// Through the gateway, into the media cache; a refusal is said in plain words.
     private func fetch() async {
         guard !fetching else { return }
-        guard let rt = model.runtime else { failure = "Vory is not connected to a gateway."; return }
+        guard let rt = model.runtime else { failure = "Hermes is not connected to a gateway."; return }
         fetching = true; failure = nil
         defer { fetching = false }
         do {
@@ -176,9 +176,9 @@ enum FileFetchFailure {
             default: break
             }
         }
-        if let e = error as? HermesAPIError, case .transport = e { return "Vory could not reach the gateway for \(name)." }
+        if let e = error as? HermesAPIError, case .transport = e { return "Hermes could not reach the gateway for \(name)." }
         if let e = error as? URLError, [.notConnectedToInternet, .networkConnectionLost, .cannotConnectToHost, .timedOut].contains(e.code) {
-            return "Vory is offline; \(name) will download when the gateway is reachable."
+            return "Hermes is offline; \(name) will download when the gateway is reachable."
         }
         return "\(name) could not be downloaded: \(error.localizedDescription)"
     }

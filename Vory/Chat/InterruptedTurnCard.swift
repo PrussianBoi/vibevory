@@ -51,7 +51,7 @@ struct InterruptedTurnCard: View {
             ? "A Mac that sleeps, or loses its network, drops its connection to the gateway."
             : "iOS suspends an app shortly after it leaves the screen, which drops its connection to the gateway."
         if cause == .appWasAway {
-            return "The gateway ended this turn because Vory was not connected to it. \(away) A gateway that sees no app on a chat stops the turn after a short wait, 20 seconds unless it was changed."
+            return "The gateway ended this turn because Hermes was not connected to it. \(away) A gateway that sees no app on a chat stops the turn after a short wait, 20 seconds unless it was changed."
         }
         return "Either Stop was pressed, or the gateway ended the turn because no app was connected to the chat. \(away) A gateway that sees no app on a chat stops the turn after a short wait, 20 seconds unless it was changed."
     }

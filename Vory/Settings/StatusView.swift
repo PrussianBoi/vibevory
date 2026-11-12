@@ -32,7 +32,7 @@ struct StatusView: View {
     var body: some View {
         let push = model.push
         SettingsList {
-            SettingsHeaderSection(title: "Status", symbol: "waveform.path.ecg", color: .green, description: "Whether each part of Vory is working right now. \(DeviceWords.Tap) a row for the page that fixes it.")
+            SettingsHeaderSection(title: "Status", symbol: "waveform.path.ecg", color: .green, description: "Whether each part of Hermes is working right now. \(DeviceWords.Tap) a row for the page that fixes it.")
             Section {
                 if let rt = model.runtime {
                     let s = rt.socketState
@@ -63,7 +63,7 @@ struct StatusView: View {
                     row("Companion", light: .off, detail: "Connect a gateway first") { CompanionView() }
                 }
             } header: { Text("On the gateway") } footer: {
-                Text("The Companion is the plugin on your gateway that sends notifications\(DeviceWords.isMac ? " and approval cards" : ", approval cards and the Live Activity") while Vory is closed.")
+                Text("The Companion is the plugin on your gateway that sends notifications\(DeviceWords.isMac ? " and approval cards" : ", approval cards and the Live Activity") while Hermes is closed.")
             }
 
             Section {
@@ -74,7 +74,7 @@ struct StatusView: View {
             } header: { Text("On \(DeviceWords.this)") }
 
             Section {
-                LabeledContent("Vory", value: "\(Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "?") (\(Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? "?"))")
+                LabeledContent("Hermes", value: "\(Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "?") (\(Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? "?"))")
                 LabeledContent("Companion this build ships", value: PushSetupModel.bundledPluginVersion)
                 if let v = setup.installedVersion { LabeledContent("Companion on the gateway", value: v) }
             } header: { Text("Versions") }
@@ -186,7 +186,7 @@ struct StatusView: View {
     }
     private func liveActivityDetail(_ push: PushRegistrar) -> String {
         if !LiveActivityController.isEnabled { return "Turned off in Settings › Notifications" }
-        if !activitiesAllowed { return "Not allowed for Vory in Settings" }
-        return push.pushToStartToken == nil ? "On. The gateway can update a running one; starting one while Vory is closed is not set up yet on \(DeviceWords.this)" : "On, and the gateway can start one while Vory is closed"
+        if !activitiesAllowed { return "Not allowed for Hermes in Settings" }
+        return push.pushToStartToken == nil ? "On. The gateway can update a running one; starting one while Hermes is closed is not set up yet on \(DeviceWords.this)" : "On, and the gateway can start one while Hermes is closed"
     }
 }

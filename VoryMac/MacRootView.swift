@@ -264,6 +264,13 @@ private struct MainSplitView: View {
             if args.contains("-vibe-open-palette") { try? await Task.sleep(for: .seconds(6)); CommandPaletteState.shared.toggle() }
         }
         #endif
+        #if DEBUG
+        .overlay {
+            if ProcessInfo.processInfo.arguments.contains("-vibe-glass-lab") {
+                ZStack { AuroraBackground(); GlassLab() }.ignoresSafeArea()
+            }
+        }
+        #endif
         // Room for the rail, the list and a reading column with a table in it: narrower than this
         // the bubbles squeezed to a few words a line.
         .frame(minWidth: 860, minHeight: 520)
@@ -641,7 +648,7 @@ private struct MacLockView: View {
     var body: some View {
         VStack(spacing: 14) {
             Image(systemName: "lock.fill").font(.system(size: 34, weight: .medium)).foregroundStyle(.secondary).accessibilityHidden(true)
-            Text("Vory is locked").font(.headline)
+            Text("Hermes is locked").font(.headline)
             if let e = model.lock.lastError { Text(e).font(.footnote).foregroundStyle(.secondary) }
             Button("Unlock with \(model.lock.biometryName)") { Task { await model.lock.unlock() } }
                 .buttonStyle(.glassProminent)

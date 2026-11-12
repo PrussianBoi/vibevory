@@ -87,7 +87,7 @@ struct VoryMacApp: App {
     var body: some Scene {
         // One window: the app has one gateway, one selection, one open chat. Closing it leaves
         // the menu bar item; the Dock icon, the Window menu or the menu bar item bring it back.
-        Window("Vory", id: MacWindow.main) {
+        Window("Hermes", id: MacWindow.main) {
             MacRootView()
                 // Bots move only while this window is visible and in front (#248).
                 .botWindowLiveness(needsKey: true)
@@ -229,7 +229,7 @@ struct VoryMacApp: App {
                 // VoiceOver read the symbol's own name ("Mostly Cloudy" for the cloud): the app's
                 // name instead, with what is going on, in the words the panel and the rail use (a
                 // separate value does not reach the status item, so it rides in the name).
-                .accessibilityLabel(voiceSession.isActive ? "Vory, voice mode" : board.attention > 0 ? "Vory, \(board.attention) need\(board.attention == 1 ? "s" : "") you" : board.running > 0 ? "Vory, \(board.running) working" : "Vory")
+                .accessibilityLabel(voiceSession.isActive ? "Hermes, voice mode" : board.attention > 0 ? "Hermes, \(board.attention) need\(board.attention == 1 ? "s" : "") you" : board.running > 0 ? "Hermes, \(board.running) working" : "Hermes")
         }
         .menuBarExtraStyle(.window)
 

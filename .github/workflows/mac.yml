@@ -39,14 +39,16 @@ jobs:
           rm -rf "$APP/Contents/PlugIns" "$APP/Contents/embedded.provisionprofile" "$APP/Contents/_CodeSignature"
           mkdir -p "$APP/Contents/Resources/PluginHost" && cp -R PluginHost/dist/. "$APP/Contents/Resources/PluginHost/"
           /usr/libexec/PlistBuddy -c "Set :CFBundleIdentifier dev.raturi.vibevory" "$APP/Contents/Info.plist"
+          # The app is "Hermes" in Finder and the Dock.
+          mv "$APP" build/Build/Products/Release/Hermes.app && APP=build/Build/Products/Release/Hermes.app
           codesign --force --deep --sign - "$APP"
           codesign --verify --deep "$APP"
-          mkdir -p out && ditto -c -k --keepParent "$APP" out/VibeVory-mac.zip
+          mkdir -p out && ditto -c -k --keepParent "$APP" out/Hermes-mac.zip
 
       - uses: actions/upload-artifact@v4
         with:
-          name: VibeVory-mac
-          path: out/VibeVory-mac.zip
+          name: Hermes-mac
+          path: out/Hermes-mac.zip
           retention-days: 14
 
       - uses: actions/upload-artifact@v4

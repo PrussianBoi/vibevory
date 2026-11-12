@@ -41,10 +41,10 @@ struct HealthReportsView: View {
     var body: some View {
         SettingsList {
             SettingsHeaderSection(title: "Crash and freeze reports", symbol: "waveform.path.ecg", color: .red,
-                                  description: "What \(DeviceWords.this) has told Vory about times the app closed unexpectedly or stopped responding. Kept on \(DeviceWords.this) only; nothing is sent.")
+                                  description: "What \(DeviceWords.this) has told Hermes about times the app closed unexpectedly or stopped responding. Kept on \(DeviceWords.this) only; nothing is sent.")
             if snapshot.windows.isEmpty && snapshot.reports.isEmpty {
                 Section {
-                    Text("No reports yet. \(DeviceWords.isMac ? "macOS" : "iOS") sends them about once a day, after Vory has been used.")
+                    Text("No reports yet. \(DeviceWords.isMac ? "macOS" : "iOS") sends them about once a day, after Hermes has been used.")
                         .foregroundStyle(.secondary)
                         .accessibilityIdentifier("healthReports.empty")
                 }
@@ -56,7 +56,7 @@ struct HealthReportsView: View {
                         ForEach(Array(snapshot.reports.reversed().enumerated()), id: \.offset) { _, r in
                             VStack(alignment: .leading, spacing: 2) {
                                 Text(Self.title(r))
-                                Text("Vory \(r.appVersion) (\(r.appBuild))").font(.footnote).foregroundStyle(.secondary)
+                                Text("Hermes \(r.appVersion) (\(r.appBuild))").font(.footnote).foregroundStyle(.secondary)
                             }
                             .accessibilityElement(children: .combine)
                         }

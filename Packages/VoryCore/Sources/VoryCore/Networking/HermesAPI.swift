@@ -16,7 +16,7 @@ public enum HermesAPIError: LocalizedError, Sendable {
         case .htmlResponse:
             return "This URL is not the Hermes dashboard API (got an HTML login/page). Use the `hermes serve` / dashboard URL, add Access service-token headers if Cloudflare Access is on, and confirm the tunnel upgrades WebSockets."
         case .cloudflareAccess:
-            return "Cloudflare Access asked for a sign-in in a browser, which Vory can't do. Check the tunnel's Access settings, or add an Access service token to this gateway in Vory."
+            return "Cloudflare Access asked for a sign-in in a browser, which Hermes can't do. Check the tunnel's Access settings, or add an Access service token to this gateway in Hermes."
         case .http(let status, let detail): return detail.isEmpty ? "HTTP \(status)" : "\(detail) (HTTP \(status))"
         case .unauthorized(let d): return d.isEmpty ? "The gateway rejected the credentials (401)." : d
         case .decoding(let m): return "Unexpected response from the gateway: \(m)"

@@ -42,6 +42,17 @@ jobs:
           nohup python3 Tools/mock-gateway/mock_gateway.py --port 9119 --token mock-token > mock.log 2>&1 &
           for i in $(seq 1 30); do curl -sf http://127.0.0.1:9119/api/status >/dev/null && break; sleep 1; done
 
+      - name: MacBook Air screen (1470x956 points, Retina)
+        continue-on-error: true
+        run: |
+          brew install jakehilborn/jakehilborn/displayplacer >/dev/null 2>&1 || true
+          displayplacer list > display.log 2>&1 || true
+          ID=$(displayplacer list | awk '/Persistent screen id:/{print $4; exit}')
+          displayplacer "id:$ID res:1470x956 scaling:on" >> display.log 2>&1 \
+            || displayplacer "id:$ID res:1470x956" >> display.log 2>&1 \
+            || displayplacer "id:$ID res:1440x900 scaling:on" >> display.log 2>&1 || true
+          system_profiler SPDisplaysDataType >> display.log 2>&1 || true
+
       - name: Run and capture
         run: |
           mkdir -p shots crash
@@ -56,8 +67,11 @@ jobs:
             osascript -e 'tell application id "com.vorantx.vory.demo" to activate' || true
             sleep 2
             # No window yet: ask for it from the Window menu, as a person would.
-            osascript -e 'tell application "System Events" to tell (first process whose bundle identifier is "com.vorantx.vory.demo") to click (first menu item of menu "Window" of menu bar 1 whose name starts with "Vory")' >> app.log 2>&1 || true
+            osascript -e 'tell application "System Events" to tell (first process whose bundle identifier is "com.vorantx.vory.demo") to click (first menu item of menu "Window" of menu bar 1 whose name starts with "Hermes")' >> app.log 2>&1 || true
             sleep 4
+            # Fill the screen, as the app would sit on a MacBook Air.
+            osascript -e 'tell application "Finder" to set b to bounds of window of desktop' -e 'tell application "System Events" to tell (first process whose bundle identifier is "com.vorantx.vory.demo") to tell window 1 to set {position, size} to {{0, 30}, {(item 3 of b), (item 4 of b) - 30}}' >> app.log 2>&1 || true
+            sleep 3
             echo "== $1: windows" >> app.log
             python3 -c 'import Quartz;[print(w.get("kCGWindowOwnerName"),w.get("kCGWindowName"),dict(w.get("kCGWindowBounds")),w.get("kCGWindowLayer")) for w in Quartz.CGWindowListCopyWindowInfo(0,0)]' >> app.log 2>&1 || true
             screencapture -x "shots/$1.png"
@@ -76,6 +90,7 @@ jobs:
           shot 05-sidebar-hidden "-vibe-sidebar hidden -vibe-open-chat 20260921_093355_d4e5f6" 25
           shot 06-sidebar-reveal "-vibe-sidebar reveal -vibe-open-chat 20260921_093355_d4e5f6" 25
           shot 07-palette "-vibe-open-palette" 25
+          shot 08-glass-lab "-vibe-glass-lab" 20
           ls -la shots
           mkdir -p crash; cp ~/Library/Logs/DiagnosticReports/*.ips crash/ 2>/dev/null || true
           find "$TMPDIR" /var/folders -name vibe-plugin-snapshot.png -exec cp {} shots/ \; 2>/dev/null || true
@@ -89,5 +104,6 @@ jobs:
             app.log
             mock.log
             build.log
+            display.log
             crash/
           retention-days: 14

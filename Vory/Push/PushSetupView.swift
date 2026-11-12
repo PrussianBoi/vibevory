@@ -327,7 +327,7 @@ struct PushSetupView: View {
             }
         } header: { sectionHeader("\(DeviceWords.This)") } footer: {
             Text(PushRelay.isConfigured
-                 ? "Registers with Vory's relay and publishes \(DeviceWords.this)'s device file to the Gateway. Content is encrypted with a key only \(DeviceWords.this) holds."
+                 ? "Registers with Hermes's relay and publishes \(DeviceWords.this)'s device file to the Gateway. Content is encrypted with a key only \(DeviceWords.this) holds."
                  : "Publishes \(DeviceWords.this)'s device file to the Gateway.")
         }
     }
@@ -529,7 +529,7 @@ struct CompanionUpdateRows: View {
                 .frame(width: 60, height: 60)
                 .symbolEffect(.bounce, value: setup.updateOutcome?.ok == true)
                 VStack(alignment: .leading, spacing: 3) {
-                    Text("Vory Companion \(version)").font(.headline)
+                    Text("Hermes Companion \(version)").font(.headline)
                     Text("Vorantx · \(sizeText)").font(.subheadline).foregroundStyle(.secondary)
                     if !setup.updating, setup.updateOutcome == nil, !setup.updateNeedsRestart {
                         Text("Sends replies as notifications, \(DeviceWords.keepsActivity)and brings approval cards to \(DeviceWords.your) the moment a bot needs a yes.")
@@ -617,7 +617,7 @@ struct CompanionUpToDateRow: View {
     var body: some View {
         VStack(spacing: 8) {
             BotFaceView(spec: AboutView.voryBot, size: 56, mood: BotFaceView.Mood(profile: "vory-update", state: .guide, squint: setup.checkingCompanion))
-            Text("Vory Companion \(PushSetupModel.bundledPluginVersion)").font(.headline)
+            Text("Hermes Companion \(PushSetupModel.bundledPluginVersion)").font(.headline)
             Text(setup.checkingCompanion ? "Checking for updates…" : "Your gateway is up to date.").font(.subheadline).foregroundStyle(.secondary)
                 .contentTransition(.numericText())
         }
@@ -630,7 +630,7 @@ struct CompanionUpToDateRow: View {
 /// the rows below ease down rather than the card growing in place.
 struct CompanionInstalledRow: View {
     var body: some View {
-        Text("Vory Companion \(PushSetupModel.bundledPluginVersion) is installed and running.").font(.footnote).foregroundStyle(.secondary)
+        Text("Hermes Companion \(PushSetupModel.bundledPluginVersion) is installed and running.").font(.footnote).foregroundStyle(.secondary)
     }
 }
 
@@ -1381,7 +1381,7 @@ final class PushSetupModel {
         await model.push.removeRegistration(runtime: rt, everywhere: false)
         let cmd = installCommand(for: rt) + " --uninstall"
         if let chat = try? await rt.newChat() {
-            await chat.send("Run this exact command in the terminal and show me its full output: `\(cmd)`. It stops the Vory companion service and deletes its files. If it fails, tell me the error verbatim.")
+            await chat.send("Run this exact command in the terminal and show me its full output: `\(cmd)`. It stops the Hermes companion service and deletes its files. If it fails, tell me the error verbatim.")
             model.pendingRoute = PendingRoute(connectionID: rt.connection.id, storedSessionID: chat.storedID, profile: chat.profile)
             model.selectedTab = .chats
         }
@@ -1854,10 +1854,10 @@ final class PushSetupModel {
         }
         let relayNote = detail.isEmpty ? "" : (detail.contains("1010") ? " Cloudflare blocked the companion's request to the relay (error 1010, browser check) — update the companion; newer ones identify themselves."
                                                                         : " The relay answered: \(detail).")
-        let strayNote = unreadable ? " A push did arrive meanwhile that Vory could not read; if that happens again, register \(DeviceWords.this) again (step 1)." : ""
+        let strayNote = unreadable ? " A push did arrive meanwhile that Hermes could not read; if that happens again, register \(DeviceWords.this) again (step 1)." : ""
         if let n = sentTo {
             testPhase = .done(ok: false, text: n == 0 ? "The companion tried, but the relay refused the push for \(DeviceWords.this).\(relayNote)\(detail.contains("1010") ? "" : " If it says \"unknown device\", register \(DeviceWords.this) again (step 1).")"
-                                                     : "The companion sent it to \(n) device\(n == 1 ? "" : "s") but nothing arrived here within three minutes.\(relayNote) Check that notifications are allowed for Vory, and the relay registration in step 1. If it turns up later, the next test will say so.\(strayNote)")
+                                                     : "The companion sent it to \(n) device\(n == 1 ? "" : "s") but nothing arrived here within three minutes.\(relayNote) Check that notifications are allowed for Hermes, and the relay registration in step 1. If it turns up later, the next test will say so.\(strayNote)")
         } else {
             testPhase = .done(ok: false, text: "The companion never picked the request up within three minutes. Is it connected (step 5)?\(strayNote)")
         }
@@ -2066,7 +2066,7 @@ final class PushSetupModel {
 
     /// The config the companion reads. Never contains this phone's own OAuth tokens.
     func configText(for rt: GatewayRuntime) -> String {
-        var lines = ["# Written by Vory. Read by hermes_push.py (HERMES_PUSH_CONFIG). Values override nothing set in the environment.",
+        var lines = ["# Written by Hermes. Read by hermes_push.py (HERMES_PUSH_CONFIG). Values override nothing set in the environment.",
                      "HERMES_PUSH_GATEWAY_URL=\(gatewayURL)",
                      "HERMES_PUSH_PUBLIC_URL=\(rt.connection.gateway.description)"]
         switch credential(for: rt) {

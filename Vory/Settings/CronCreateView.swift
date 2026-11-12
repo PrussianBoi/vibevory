@@ -62,7 +62,7 @@ final class CronCreateSupport {
         return status?["version"]?.stringValue
     }
 
-    static let refusalMessage = "This gateway\u{2019}s Hermes can\u{2019}t create scheduled tasks from Vory. Update Hermes to add them here."
+    static let refusalMessage = "This gateway can\u{2019}t take scheduled tasks from this version of the app. Update the app to add them here."
 }
 
 /// A new scheduled task (#428): what it runs, when, on which bot, and where its result goes, as Hermes's own create takes

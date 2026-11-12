@@ -197,7 +197,7 @@ struct RootView: View {
                 Task { @MainActor in
                     try? await Task.sleep(for: .seconds(1))
                     let answer = await SiriAsk.ask(question)
-                    UtteranceListener.log.notice("Ask Vory → \(answer, privacy: .public)")
+                    UtteranceListener.log.notice("Ask Hermes → \(answer, privacy: .public)")
                 }
             }
             #endif
@@ -264,7 +264,7 @@ struct LockScreenView: View {
             Rectangle().fill(.regularMaterial).ignoresSafeArea()
             VStack(spacing: 20) {
                 Image(systemName: "lock.fill").font(.system(size: 44)).foregroundStyle(.secondary).accessibilityHidden(true)
-                Text("Vory is locked").font(.title2.weight(.semibold))
+                Text("Hermes is locked").font(.title2.weight(.semibold))
                 if let e = model.lock.lastError { Text(e).font(.footnote).foregroundStyle(.secondary).multilineTextAlignment(.center) }
                 Button("Unlock with \(model.lock.biometryName)") { Task { await model.lock.unlock() } }
                     .buttonStyle(.glassProminent)

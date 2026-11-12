@@ -240,7 +240,7 @@ struct GatewayFormView: View {
             Text("Backup address")
         } footer: {
             VStack(alignment: .leading, spacing: 6) {
-                Text("A second way to reach the same gateway, for at home and away. Vory tries the address that worked last, then the other. The sign-in is the same for both.")
+                Text("A second way to reach the same gateway, for at home and away. Hermes tries the address that worked last, then the other. The sign-in is the same for both.")
                 if let backupProblem { Text(backupProblem).foregroundStyle(.red).accessibilityIdentifier("gateway.backupProblem") }
                 else if let b = normalizedBackup {
                     Text("Will also try \(b.description)").foregroundStyle(.secondary)
@@ -255,8 +255,8 @@ struct GatewayFormView: View {
     /// One address passed and the other has not: it is saved all the same, and said so.
     static func untestedNote(primaryPassed: Bool, backupPassed: Bool) -> String? {
         switch (primaryPassed, backupPassed) {
-        case (true, false): return "Backup address: not tested from this network. Vory tries it when the gateway URL does not answer."
-        case (false, true): return "Gateway URL: not tested from this network. Vory tries it when the backup address does not answer."
+        case (true, false): return "Backup address: not tested from this network. Hermes tries it when the gateway URL does not answer."
+        case (false, true): return "Gateway URL: not tested from this network. Hermes tries it when the backup address does not answer."
         default: return nil
         }
     }

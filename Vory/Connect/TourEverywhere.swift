@@ -37,7 +37,7 @@ enum TourPlace: Int, CaseIterable, Hashable {
 
     /// The small print under the last of the places Sprout's ask reaches.
     var smallPrint: String? {
-        self == .watch ? "Notifications and Live Activities need the Vory Companion on your gateway." : nil
+        self == .watch ? "Notifications and Live Activities need the Hermes Companion on your gateway." : nil
     }
 
     /// What VoiceOver reads for the frame: the frames are pictures, read as their captions.
@@ -46,7 +46,7 @@ enum TourPlace: Int, CaseIterable, Hashable {
         case .island: return "Dynamic Island. Sprout needs approval. In the Dynamic Island while a bot works."
         case .lockScreen: return "Lock Screen. Sprout needs approval. On your Lock Screen, ready to answer."
         case .watch: return "Apple Watch. Sprout\u{2019}s approval, with Allow once and Deny. On your Apple Watch."
-        case .devices: return "\(TourPlace.otherDevice) and Mac. Vory on both."
+        case .devices: return "\(TourPlace.otherDevice) and Mac. Hermes on both."
         case .homeAway: return "Home and away. Home: your local network. Away: Tailscale or a Cloudflare Tunnel."
         case .iCloud: return "iCloud. The bots move from your \(DeviceWords.device) to your other devices."
         }

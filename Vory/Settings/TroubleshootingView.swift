@@ -42,13 +42,13 @@ struct TroubleshootingView: View {
         ]),
         Topic(id: "push", title: DeviceWords.isMac ? "No notifications" : "No notifications or Live Activity", symbol: "bell.slash", checks: [
             "Settings › Companion › This device must show the relay registered and the device file published. Register again if either is missing.",
-            "\(DeviceWords.settings) › Notifications › Vory must allow alerts\(!DeviceWords.isMac ? ", and Live Activities must be on" : "").",
+            "\(DeviceWords.settings) › Notifications › Hermes must allow alerts\(!DeviceWords.isMac ? ", and Live Activities must be on" : "").",
             "The Companion sends only for chats it mirrors: it attaches to running sessions when they start, so a turn already running when it was installed will not report.",
             "Focus modes and Notification Summary hold alerts back; check the Focus that is on.",
             "One device, one registration: signing in on a second one does not stop the first.",
         ]),
         Topic(id: "interrupted", title: "A long task stops with \u{201C}Operation interrupted\u{201D}", symbol: "stop.circle", checks: [
-            "The gateway stops a turn when no app has been connected to its chat for a while. " + (DeviceWords.isMac ? "A Mac that sleeps or loses its network drops the connection." : "iOS suspends Vory shortly after it leaves the screen, which drops the connection."),
+            "The gateway stops a turn when no app has been connected to its chat for a while. " + (DeviceWords.isMac ? "A Mac that sleeps or loses its network drops the connection." : "iOS suspends Hermes shortly after it leaves the screen, which drops the connection."),
             "Update Hermes on the gateway (Settings › System). Versions since September 2026 leave a turn that is still working alone and only stop one that has done nothing for ten minutes.",
             "On an older Hermes, make it wait longer: Settings › System › Keep work running. The dashboard service reads it when it starts, so restart it on the gateway machine afterwards.",
             "\(AwayGrace.envKey) in the gateway's environment wins over that setting. If it is there (Settings › Environment), change or remove it.",
@@ -113,7 +113,7 @@ struct TroubleshootingView: View {
                         }
                         .accessibilityIdentifier("troubleshooting.screenLayout")
                     } footer: {
-                        Text("For testing. Shows how Vory measures this screen. A screenshot of it helps fix layouts on your device.")
+                        Text("For testing. Shows how Hermes measures this screen. A screenshot of it helps fix layouts on your device.")
                     }
                 }
             }

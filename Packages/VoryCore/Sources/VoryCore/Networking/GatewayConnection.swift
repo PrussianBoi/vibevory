@@ -90,7 +90,7 @@ public struct GatewayConnection: Codable, Identifiable, Hashable, Sendable {
     /// (`isDemo`, `GatewayRuntime.isEphemeral`); nothing compares its name or address.
     public static let demoID = UUID(uuidString: "D3A0D3A0-0000-4000-8000-00000000DE30")!
     /// `.invalid` never resolves, and only the demo's own transport ever sees it.
-    public static let demo = GatewayConnection(id: demoID, name: "Vory demo", gateway: try! GatewayURL.normalize("http://demo.invalid"), authMode: .sessionToken)
+    public static let demo = GatewayConnection(id: demoID, name: "Hermes demo", gateway: try! GatewayURL.normalize("http://demo.invalid"), authMode: .sessionToken)
     public var isDemo: Bool { id == Self.demoID }
 }
 

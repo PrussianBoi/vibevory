@@ -201,7 +201,7 @@ final class HandsFreeSession {
                 #if os(macOS)
                 let why = "Microphone access denied. Allow it in System Settings › Privacy & Security › Microphone."
                 #else
-                let why = "Microphone access denied. Allow it in Settings › Vory."
+                let why = "Microphone access denied. Allow it in Settings › Hermes."
                 #endif
                 // Said in the chat: the voice screen never shows for a session that could not start.
                 self?.lastError = why

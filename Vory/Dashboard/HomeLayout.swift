@@ -98,7 +98,7 @@ struct HomeSettingsView: View {
                 TextField("Your name", text: $userName).textContentType(.givenName)
             } header: { Text("You") } footer: { Text("Home greets you by name. Stays on \(DeviceWords.this).") }
             Section {
-                Picker("Open Vory on", selection: Binding(get: { AppModel.AppTab(rawValue: launchTab) ?? .chats }, set: { tab in
+                Picker("Open Hermes on", selection: Binding(get: { AppModel.AppTab(rawValue: launchTab) ?? .chats }, set: { tab in
                     launchTab = tab.rawValue
                     var l = TabLayout.parse(tabLayoutRaw)
                     if !l.contains(tab) { l.set(tab, enabled: true); tabLayoutRaw = l.encoded }

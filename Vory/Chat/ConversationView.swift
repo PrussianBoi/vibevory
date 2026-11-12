@@ -274,6 +274,24 @@ struct ConversationView: View {
                 // Only while the Chats page is on show (the Mac keeps it mounted behind the
                 // other pages, see MainSplitView): its items must not stand in their toolbar.
                 if pageShown {
+                // The bot, in the middle over its thread; a click opens its profile.
+                ToolbarItem(placement: .principal) {
+                    // The face's small turn plays on the click, as on the iPhone's pill.
+                    Button { BotAmbient.shared.tap(profile: chat.profileName, session: chat.storedID); showProfile = true } label: {
+                        HStack(spacing: 7) {
+                            // The pose the header shows on the phone, in the pill (the Mac's toolbar hosts it).
+                            BotAvatar(profile: chat.profileName, size: 18, active: chat.isRunning, mood: BotFaceView.Mood(session: chat.storedID, state: chat.botState))
+                                // Part of the button's label: while the bot worked, the live face's own tap
+                                // took the click and the profile did not open; the button plays the turn now.
+                                .allowsHitTesting(false)
+                            Text(botLabel(chat))
+                                .font(.system(size: 12.5, weight: .medium)).lineLimit(1)
+                        }
+                        .padding(.horizontal, 4)
+                    }
+                    .help(macSubtitle(chat))
+                    .accessibilityIdentifier("chat.bot")
+                }
                 // The whole conversation by voice, in its own small window.
                 ToolbarItem(placement: .primaryAction) {
                     let on = HandsFreeSession.shared.isActive(for: chat)

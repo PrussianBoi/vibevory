@@ -370,7 +370,7 @@ final class LiveActivityController: TurnActivityReporting {
         let away = UIApplication.shared.applicationState == .background
         guard Self.shouldAsk(lastAskAt: lastAsk?.at, lastAskAway: lastAsk?.away ?? false, awayNow: away) else { return }
         lastAsk = (Date(), away)
-        guard ActivityAuthorizationInfo().areActivitiesEnabled else { Self.lastStartError = "Live Activities are turned off for Vory in iOS Settings"; return }
+        guard ActivityAuthorizationInfo().areActivitiesEnabled else { Self.lastStartError = "Live Activities are turned off for Hermes in iOS Settings"; return }
         // After a relaunch the system may still show this chat's activity: adopt it instead of stacking a second one.
         if let existing = Activity<HermesTurnAttributes>.activities.first(where: {
             $0.attributes.storedSessionID == chat.storedID && $0.content.state.endedAt == nil && $0.activityState == .active && !Self.endingIDs.contains($0.id)

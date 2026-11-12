@@ -99,7 +99,7 @@ struct ChatEntity: AppEntity, IndexedEntity {
     var attributeSet: CSSearchableItemAttributeSet {
         let a = CSSearchableItemAttributeSet(contentType: .text)
         a.title = title
-        a.contentDescription = bot.map { "Chat with \($0) in Vory" } ?? "Chat in Vory"
+        a.contentDescription = bot.map { "Chat with \($0) in Hermes" } ?? "Chat in Hermes"
         return a
     }
 }

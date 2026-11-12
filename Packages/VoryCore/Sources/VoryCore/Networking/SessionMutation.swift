@@ -80,7 +80,7 @@ public enum SessionMutation {
         case .unknownExecution?: return "Hermes can\u{2019}t change this chat right now: its last turn was lost when the gateway restarted."
         case .revisionConflict?, .staleGeneration?: return "The chat changed on the gateway at the same moment. Try again."
         case .admissionConflict?, .identityRequired?: return "Hermes didn\u{2019}t take the change as sent. Try again."
-        case .clientUpgradeRequired?: return "This gateway\u{2019}s Hermes needs a newer Vory to change chats. Update Vory."
+        case .clientUpgradeRequired?: return "This gateway needs a newer version of this app to change chats. Update the app."
         case .draining?, .storageUnavailable?: return "Hermes is busy right now. Try again in a moment."
         case nil: return nil
         }

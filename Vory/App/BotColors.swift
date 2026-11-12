@@ -180,6 +180,15 @@ struct BotAvatar: View {
     }
 
     var body: some View {
+        #if os(macOS)
+        // VibeVory: a slowly turning sphere of dots, one shape per profile, in place of the face.
+        DotSphereAvatar(profile: profile, size: size, active: active || mood.state != .idle)
+        #else
+        faceBody
+        #endif
+    }
+
+    @ViewBuilder private var faceBody: some View {
         let hex = lookScope?.color(for: profile) ?? BotColors.hex(for: profile, overrides: overrides)
         Group {
             if let scope = lookScope, scope.avatar(for: profile) != nil {
@@ -469,3 +478,105 @@ struct ArrivalProbe: View {
     }
     #endif
 }
+
+
+#if os(macOS)
+/// VibeVory's avatar: white dots on a turning sphere. Each profile gets one of five shapes (dense,
+/// sparse, ribbed, scattered, an atom's rings), picked from its name so it never changes; it turns
+/// faster while its bot works.
+struct DotSphereAvatar: View {
+    var profile: String
+    var size: CGFloat
+    var active = false
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    private static let start = Date()
+
+    enum Kind: Int, CaseIterable { case dense, sparse, ribs, scatter, atom }
+
+    static func kind(for profile: String) -> Kind {
+        let n = profile.unicodeScalars.reduce(0) { ($0 &* 31 &+ Int($1.value)) & 0x7fffffff }
+        return Kind(rawValue: n % Kind.allCases.count) ?? .dense
+    }
+
+    /// Points on the unit sphere (x, y, z, dot weight, ring), built once per shape and size class.
+    nonisolated(unsafe) private static var cache: [String: [SIMD4<Float>]] = [:]
+    static func points(_ kind: Kind, small: Bool) -> [SIMD4<Float>] {
+        let key = "\(kind.rawValue)-\(small)"
+        if let p = cache[key] { return p }
+        var p: [SIMD4<Float>] = []
+        switch kind {
+        case .dense, .sparse:
+            let n = (kind == .dense ? 220 : 110) / (small ? 2 : 1)
+            for i in 0..<n {
+                let y = 1 - 2 * (Float(i) + 0.5) / Float(n), r = (1 - y * y).squareRoot(), a = Float(i) * 2.39996
+                p.append([r * cos(a), y, r * sin(a), 1])
+            }
+        case .ribs:
+            let rows = small ? 10 : 15, cols = small ? 8 : 12
+            for m in 0..<cols {
+                let lon = Float(m) * 2 * .pi / Float(cols)
+                for k in 1..<rows {
+                    let lat = -Float.pi / 2 + Float(k) * .pi / Float(rows)
+                    p.append([cos(lat) * cos(lon), sin(lat), cos(lat) * sin(lon), 1])
+                }
+            }
+        case .scatter:
+            var s: UInt64 = 7
+            func rnd() -> Float { s = s &* 6364136223846793005 &+ 1442695040888963407; return Float(s >> 40) / Float(1 << 24) }
+            for _ in 0..<(small ? 90 : 170) {
+                let u = rnd() * 2 - 1, t = rnd() * 6.283, r = (1 - u * u).squareRoot(), R = 0.85 + rnd() * 0.2
+                p.append([R * r * cos(t), R * u, R * r * sin(t), 0.6 + rnd() * 0.8])
+            }
+        case .atom:
+            let per = small ? 34 : 60
+            for o in 0..<3 {
+                let tilt = Float(o) * .pi / 3
+                for k in 0..<per {
+                    let a = Float(k) / Float(per) * 6.283, x = cos(a), y = sin(a) * 0.35
+                    p.append([x * cos(tilt) - y * sin(tilt), x * sin(tilt) + y * cos(tilt), sin(a) * 0.94, Float(o) + 10])
+                }
+            }
+        }
+        cache[key] = p
+        return p
+    }
+
+    var body: some View {
+        let kind = Self.kind(for: profile)
+        TimelineView(.animation(minimumInterval: 1.0 / 30.0, paused: reduceMotion)) { context in
+            let t = Float(context.date.timeIntervalSince(Self.start))
+            Canvas { ctx, sz in
+                let pts = Self.points(kind, small: size < 30)
+                let R = Float(min(sz.width, sz.height)) * 0.42
+                let cx0 = Float(sz.width) / 2, cy0 = Float(sz.height) / 2
+                let speed: Float = active ? 1.4 : 0.5
+                let ry = t * speed, rx = 0.35 + sin(t * 0.3) * 0.15
+                let cy = cos(ry), sy = sin(ry), cx = cos(rx), sx = sin(rx)
+                let base: Float = size < 30 ? 0.55 : 1.5
+                for q in pts {
+                    var x = q.x, y = q.y, z = q.z
+                    if kind == .atom {
+                        let spin = t * speed * (1.6 + (q.w - 10) * 0.5)
+                        let ca = cos(spin), sa = sin(spin)
+                        (x, z) = (x * ca - z * sa, x * sa + z * ca)
+                    } else {
+                        (x, z) = (x * cy - z * sy, x * sy + z * cy)
+                    }
+                    (y, z) = (y * cx - z * sx, y * sx + z * cx)
+                    let depth = (z + 1) / 2
+                    let weight = kind == .atom ? 1 : q.w
+                    let r = max(0.3, base * weight * (0.45 + 0.75 * depth) * (kind == .sparse ? 1.4 : 1))
+                    let rect = CGRect(x: CGFloat(cx0 + x * R - r), y: CGFloat(cy0 - y * R - r), width: CGFloat(2 * r), height: CGFloat(2 * r))
+                    ctx.fill(Path(ellipseIn: rect), with: .color(Color(white: 0.96).opacity(Double(0.25 + 0.75 * depth))))
+                }
+                if kind == .atom {
+                    let r = CGFloat(size < 30 ? 1.3 : 3)
+                    ctx.fill(Path(ellipseIn: CGRect(x: CGFloat(cx0) - r, y: CGFloat(cy0) - r, width: 2 * r, height: 2 * r)), with: .color(.white))
+                }
+            }
+        }
+        .frame(width: size, height: size)
+        .accessibilityHidden(true)
+    }
+}
+#endif

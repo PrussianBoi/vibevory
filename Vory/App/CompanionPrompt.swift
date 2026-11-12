@@ -40,7 +40,7 @@ struct CompanionPromptSheet: View {
                 .padding(.top, 6)
                 Text("Settings › Notifications can turn it on later.").font(.caption).foregroundStyle(.tertiary)
             } else {
-                Text("Unlock Vory's full potential").font(.title2.weight(.bold)).multilineTextAlignment(.center)
+                Text("Unlock Hermes's full potential").font(.title2.weight(.bold)).multilineTextAlignment(.center)
                 Text(Self.pitch)
                     .font(.body).foregroundStyle(.secondary).multilineTextAlignment(.center)
                     .fixedSize(horizontal: false, vertical: true)

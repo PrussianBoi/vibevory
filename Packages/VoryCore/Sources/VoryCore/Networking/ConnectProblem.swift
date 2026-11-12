@@ -32,15 +32,15 @@ public enum ConnectProblem: Sendable, Equatable {
     public var detail: String {
         switch self {
         case .cloudflareOrigin(let status):
-            return "Cloudflare answered for the gateway's address but couldn't reach the gateway behind it (error \(status)). Check that the gateway and its tunnel (cloudflared) are running. Vory keeps trying."
+            return "Cloudflare answered for the gateway's address but couldn't reach the gateway behind it (error \(status)). Check that the gateway and its tunnel (cloudflared) are running. Hermes keeps trying."
         case .cloudflareSignIn:
-            return "Cloudflare Access asked for a sign-in in a browser, which Vory can't do. Check the tunnel's Access settings, or add an Access service token to this gateway in Vory. Vory keeps trying."
+            return "Cloudflare Access asked for a sign-in in a browser, which Hermes can't do. Check the tunnel's Access settings, or add an Access service token to this gateway in Hermes. Hermes keeps trying."
         case .webPage(let status):
-            return "Something between you and the gateway answered with a web page (HTTP \(status)): a Wi-Fi sign-in, a proxy, or the wrong address. Vory keeps trying."
+            return "Something between you and the gateway answered with a web page (HTTP \(status)): a Wi-Fi sign-in, a proxy, or the wrong address. Hermes keeps trying."
         case .http(let status):
-            return "The gateway's address answered with HTTP \(status) instead of connecting. Vory keeps trying."
+            return "The gateway's address answered with HTTP \(status) instead of connecting. Hermes keeps trying."
         case .noAnswer:
-            return "Nothing came back from the gateway's address. Vory keeps trying, and tries again at once when the network changes."
+            return "Nothing came back from the gateway's address. Hermes keeps trying, and tries again at once when the network changes."
         }
     }
 

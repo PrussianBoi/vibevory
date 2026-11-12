@@ -428,7 +428,7 @@ struct PhotoSaveFailure: Equatable {
     /// Photos access is off for the app (refused, or restricted on the device).
     var accessOff: Bool
 
-    static let accessOffMessage = "Photos access is off for Vory. Turn on Add Photos Only in Settings to save pictures."
+    static let accessOffMessage = "Photos access is off for Hermes. Turn on Add Photos Only in Settings to save pictures."
 
     /// `error` is what the save threw; `addOnly` is the app's add-only Photos access as it stands
     /// after it (Photos does not always answer a refusal with its access error).
