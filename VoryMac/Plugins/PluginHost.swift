@@ -118,7 +118,13 @@ final class PluginHost {
             source: "(()=>{const s=document.createElement('style');s.textContent=\(Self.js(css));document.documentElement.appendChild(s)})()",
             injectionTime: .atDocumentEnd, forMainFrameOnly: true))
         let web = WKWebView(frame: .zero, configuration: config)
-        web.setValue(false, forKey: "drawsBackground")
+        #if DEBUG
+        // `-vibe-plugin-opaque`: the page painted, to tell a hidden view from a clear one (CI).
+        let clear = !ProcessInfo.processInfo.arguments.contains("-vibe-plugin-opaque")
+        #else
+        let clear = true
+        #endif
+        if clear { web.setValue(false, forKey: "drawsBackground") }
         web.underPageBackgroundColor = .clear
         #if DEBUG
         web.isInspectable = true
