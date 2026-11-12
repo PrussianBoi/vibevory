@@ -295,6 +295,9 @@ struct ConversationView: View {
                 // Only while the Chats page is on show (the Mac keeps it mounted behind the
                 // other pages, see MainSplitView): its items must not stand in their toolbar.
                 if pageShown {
+                // VibeVory: keeps the buttons at the window's right edge (with the bot's pill out of
+                // the toolbar they slid in beside the tabs).
+                ToolbarSpacer(.flexible)
                 // The whole conversation by voice, in its own small window.
                 ToolbarItem(placement: .primaryAction) {
                     let on = HandsFreeSession.shared.isActive(for: chat)

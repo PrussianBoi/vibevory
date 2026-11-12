@@ -134,7 +134,8 @@ struct ComposerTextView: View {
     private static let attachmentTypes: [UTType] = [.image, .movie, .pdf, .audio]
 
     var body: some View {
-        TextField(placeholder, text: $text, axis: .vertical)
+        // VibeVory: a placeholder that stays readable on the light sunset.
+        TextField(placeholder, text: $text, prompt: Text(placeholder).foregroundStyle(.white.opacity(0.6)), axis: .vertical)
             .textFieldStyle(.plain)
             .lineLimit(1...maxLines)
             .focused($isFocused)
