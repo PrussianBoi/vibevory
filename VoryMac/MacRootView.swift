@@ -40,6 +40,9 @@ struct MacRootView: View {
                     .toolbarBackgroundVisibility(.hidden, for: .windowToolbar)
             }
         }
+        // The aurora behind the whole window: the columns and lists are clear, so it shows
+        // through the sidebar's Liquid Glass and between the messages.
+        .containerBackground(for: .window) { AuroraBackground() }
         // The first time a gateway comes up on this Mac (its own first connection, or one the
         // keychain already held): what the Companion needs from here, if anything.
         .onChange(of: model.runtime?.connection.id, initial: true) { _, _ in offerCompanion() }

@@ -715,6 +715,8 @@ struct ChatListView: View {
         .background(closedStrip ? Color(.systemBackground) : Color.clear)
         #endif
         #if os(macOS)
+        // Clear, so the window's aurora shows behind the chats.
+        .scrollContentBackground(.hidden)
         // The search field sits over the list it searches (in the top inset below), as in
         // Messages: in the window's toolbar it landed at the far end, over the open chat.
         .onChange(of: model.focusSearchRequest) { _, r in if r != nil { searchFocused = true } }
