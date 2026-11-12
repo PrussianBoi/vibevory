@@ -132,12 +132,18 @@ extension NSColor {
     static var systemGray5: NSColor { dynamic(light: rgb(0xE5E5EA), dark: rgb(0x2C2C2E)) }
     static var systemGray6: NSColor { dynamic(light: rgb(0xF2F2F7), dark: rgb(0x1C1C1E)) }
 
-    static var systemBackground: NSColor { .windowBackgroundColor }
-    static var secondarySystemBackground: NSColor { .controlBackgroundColor }
-    static var tertiarySystemBackground: NSColor { .underPageBackgroundColor }
-    static var systemGroupedBackground: NSColor { dynamic(light: rgb(0xF2F2F7), dark: rgb(0x1C1C1E)) }
-    static var secondarySystemGroupedBackground: NSColor { dynamic(light: .white, dark: rgb(0x1C1C1E)) }
-    static var tertiarySystemGroupedBackground: NSColor { dynamic(light: rgb(0xF2F2F7), dark: rgb(0x2C2C2E)) }
+    // The window's aurora is the ground (Hermes Desktop + Zephyr): backgrounds and cards are
+    // smoke over it, not paint. Indigo-tinted so the sky's colour carries through.
+    private static func smoke(_ light: CGFloat, _ dark: CGFloat) -> NSColor {
+        dynamic(light: NSColor(white: 1, alpha: light),
+                dark: NSColor(srgbRed: 0.07, green: 0.08, blue: 0.16, alpha: dark))
+    }
+    static var systemBackground: NSColor { smoke(0.55, 0.30) }
+    static var secondarySystemBackground: NSColor { smoke(0.60, 0.42) }
+    static var tertiarySystemBackground: NSColor { smoke(0.65, 0.50) }
+    static var systemGroupedBackground: NSColor { smoke(0.55, 0.30) }
+    static var secondarySystemGroupedBackground: NSColor { smoke(0.60, 0.42) }
+    static var tertiarySystemGroupedBackground: NSColor { smoke(0.65, 0.50) }
     static var label: NSColor { .labelColor }
     static var secondaryLabel: NSColor { .secondaryLabelColor }
     static var separator: NSColor { .separatorColor }
