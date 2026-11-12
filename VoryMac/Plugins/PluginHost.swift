@@ -80,7 +80,8 @@ final class PluginHost {
         #if DEBUG
         Task {
             try? await Task.sleep(for: .seconds(3))
-            let text = try? await webView.evaluateJavaScript("document.body.innerText.slice(0,300)+' | html '+document.body.innerHTML.length+' | '+location.href+' | '+document.body.scrollWidth+'x'+document.body.scrollHeight")
+            let text = try? await webView.evaluateJavaScript("document.body.innerText.slice(0,300)+' | html '+document.body.innerHTML.length+' | '+location.href+' | '+document.body.scrollWidth+'x'+document.body.scrollHeight+' | vis '+document.visibilityState")
+            NSLog("[plugins] occlusion visible=%@ alpha=%f hidden=%@ layer=%@", webView.window?.occlusionState.contains(.visible) == true ? "yes" : "no", webView.alphaValue, webView.isHiddenOrHasHiddenAncestor ? "yes" : "no", webView.layer.map { "\($0.opacity) \($0.isHidden)" } ?? "none")
             if let image = try? await webView.takeSnapshot(configuration: nil),
                let tiff = image.tiffRepresentation, let rep = NSBitmapImageRep(data: tiff),
                let png = rep.representation(using: .png, properties: [:]) {
@@ -128,6 +129,11 @@ final class PluginHost {
         web.underPageBackgroundColor = .clear
         #if DEBUG
         web.isInspectable = true
+        // `-vibe-plugin-no-occlusion`: WebKit paints even if it thinks the window is covered (CI test).
+        if ProcessInfo.processInfo.arguments.contains("-vibe-plugin-no-occlusion"),
+           web.responds(to: NSSelectorFromString("_setWindowOcclusionDetectionEnabled:")) {
+            web.setValue(false, forKey: "_windowOcclusionDetectionEnabled")
+        }
         #endif
         return web
     }
