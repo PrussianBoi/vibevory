@@ -647,7 +647,7 @@ private struct ChatTabsArea: View {
     @State private var tabs = ChatTabs.shared
 
     var body: some View {
-        ChatDetailStack(path: $path) { NoChatView() }
+        ChatDetailStack(path: $path) { StartPage(path: $path) }
             .safeAreaInset(edge: .top, spacing: 0) { TabStrip() }
             .onChange(of: tabs.selected) { _, _ in
                 path = tabs.current?.route?.path ?? NavigationPath()
@@ -661,5 +661,97 @@ private struct ChatTabsArea: View {
                 ChatNavigation.select(ChatRoute(storedID: args[i + 1]), in: &path)
             }
             #endif
+    }
+}
+
+/// An empty tab, as Hermes Desktop has it: the wordmark, a line on what to ask, and the chats
+/// to pick back up as glass cards. The composer comes with the new chat (⌘N, or a card).
+private struct StartPage: View {
+    @Environment(AppModel.self) private var model
+    @Environment(\.macPageShown) private var shown
+    @Binding var path: NavigationPath
+    @State private var recent: [StoredSession] = []
+
+    var body: some View {
+        VStack(spacing: 22) {
+            Spacer(minLength: 40)
+            Text("HERMES")
+                .font(.system(size: 92, weight: .heavy, design: .serif))
+                .tracking(10)
+                .foregroundStyle(.white.opacity(0.94))
+                .shadow(color: .black.opacity(0.25), radius: 18, y: 6)
+                .accessibilityAddTraits(.isHeader)
+            Text("Drop a file path, a traceback, or a rough idea.")
+                .font(.system(size: 15))
+                .foregroundStyle(.white.opacity(0.72))
+            Button {
+                model.newChatRequest = UUID()
+            } label: {
+                Label("New chat", systemImage: "square.and.pencil").padding(.horizontal, 6)
+            }
+            .buttonStyle(.glass)
+            .controlSize(.large)
+            .keyboardShortcut(.return, modifiers: .command)
+            if !recent.isEmpty {
+                VStack(alignment: .leading, spacing: 10) {
+                    Text("PICK UP WHERE YOU LEFT OFF")
+                        .font(.system(size: 11, weight: .semibold)).tracking(2)
+                        .foregroundStyle(.white.opacity(0.6))
+                    GlassEffectContainer(spacing: 12) {
+                        HStack(spacing: 12) {
+                            ForEach(recent.prefix(3)) { s in card(s) }
+                        }
+                    }
+                }
+                .frame(maxWidth: 760)
+                .padding(.top, 26)
+            }
+            Spacer(minLength: 60)
+        }
+        .padding(.horizontal, 32)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .toolbar {
+            if shown {
+                ToolbarItem(placement: .principal) { Color.clear.frame(width: 1, height: 1).accessibilityHidden(true) }
+                    .sharedBackgroundVisibility(.hidden)
+            }
+        }
+        .toolbarBackgroundVisibility(.hidden, for: .windowToolbar)
+        .task(id: model.runtime?.connection.id) { await load() }
+    }
+
+    private func card(_ s: StoredSession) -> some View {
+        Button {
+            ChatNavigation.select(ChatRoute(storedID: s.id, title: s.title, profile: s.profile), in: &path)
+        } label: {
+            VStack(alignment: .leading, spacing: 6) {
+                Text(s.title?.isEmpty == false ? s.title! : (s.preview ?? "Untitled chat"))
+                    .font(.system(size: 15, weight: .semibold))
+                    .lineLimit(2)
+                    .multilineTextAlignment(.leading)
+                Text(ago(s.lastActive ?? s.startedAt))
+                    .font(.system(size: 12.5))
+                    .foregroundStyle(.secondary)
+            }
+            .frame(maxWidth: .infinity, minHeight: 64, alignment: .topLeading)
+            .padding(16)
+            .contentShape(.rect(cornerRadius: 18))
+        }
+        .buttonStyle(.plain)
+        .glassEffect(.regular.interactive(), in: .rect(cornerRadius: 18))
+    }
+
+    private func ago(_ t: Double?) -> String {
+        guard let t else { return "" }
+        let d = Date(timeIntervalSince1970: t)
+        return "Left off " + d.formatted(.relative(presentation: .named))
+    }
+
+    private func load() async {
+        guard let runtime = model.runtime else { recent = []; return }
+        let q = [URLQueryItem(name: "order", value: "recent"), URLQueryItem(name: "limit", value: "6")]
+        if let r: SessionListResponse = try? await runtime.api.get("/api/sessions", query: q, profile: runtime.selectedProfile) {
+            recent = r.sessions.filter { $0.source != "cron" && $0.archived != true }
+        }
     }
 }
