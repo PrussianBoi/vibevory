@@ -42,15 +42,19 @@ jobs:
           nohup python3 Tools/mock-gateway/mock_gateway.py --port 9119 --token mock-token > mock.log 2>&1 &
           for i in $(seq 1 30); do curl -sf http://127.0.0.1:9119/api/status >/dev/null && break; sleep 1; done
 
-      - name: MacBook Air screen (1470x956 points, Retina)
+      - name: Screen near a MacBook Air, transparency on
         continue-on-error: true
         run: |
           brew install jakehilborn/jakehilborn/displayplacer >/dev/null 2>&1 || true
           displayplacer list > display.log 2>&1 || true
           ID=$(displayplacer list | awk '/Persistent screen id:/{print $4; exit}')
-          displayplacer "id:$ID res:1470x956 scaling:on" >> display.log 2>&1 \
-            || displayplacer "id:$ID res:1470x956" >> display.log 2>&1 \
-            || displayplacer "id:$ID res:1440x900 scaling:on" >> display.log 2>&1 || true
+          # The runner's virtual screen has no 1470x956 or Retina modes; 1600x900 is the closest.
+          displayplacer "id:$ID res:1600x900 hz:60 color_depth:7" >> display.log 2>&1 || true
+          # Glass shows as solid grey with Reduce Transparency on; make sure it is off.
+          echo "reduceTransparency before: $(defaults read com.apple.universalaccess reduceTransparency 2>&1)" >> display.log
+          defaults write com.apple.universalaccess reduceTransparency -bool false >> display.log 2>&1 || sudo defaults write com.apple.universalaccess reduceTransparency -bool false >> display.log 2>&1 || true
+          defaults write com.apple.universalaccess increaseContrast -bool false >> display.log 2>&1 || true
+          echo "reduceTransparency after: $(defaults read com.apple.universalaccess reduceTransparency 2>&1)" >> display.log
           system_profiler SPDisplaysDataType >> display.log 2>&1 || true
 
       - name: Run and capture
