@@ -138,6 +138,8 @@ final class PluginHost {
         let signer = await runtime.api.signer
         gatewayBase = await runtime.api.gateway.base.absoluteString
         while gatewayBase.hasSuffix("/") { gatewayBase.removeLast() }
+        // Load once the view is in the window (PluginPageArea places it), not before.
+        for _ in 0..<50 where web.window == nil { try? await Task.sleep(for: .milliseconds(100)) }
         if web.url == nil {
             await withCheckedContinuation { c in
                 loaded = c
