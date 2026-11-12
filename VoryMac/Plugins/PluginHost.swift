@@ -80,7 +80,7 @@ final class PluginHost {
         #if DEBUG
         Task {
             try? await Task.sleep(for: .seconds(3))
-            let text = try? await webView.evaluateJavaScript("document.body.innerText.slice(0,300)+" | html "+document.body.innerHTML.length+' | '+location.href+' | '+document.body.scrollWidth+'x'+document.body.scrollHeight")
+            let text = try? await webView.evaluateJavaScript("document.body.innerText.slice(0,300)+' | html '+document.body.innerHTML.length+' | '+location.href+' | '+document.body.scrollWidth+'x'+document.body.scrollHeight")
             NSLog("[plugins] mounted %@: frame %@ window %@ text: %@", path, NSStringFromRect(webView.frame), webView.window != nil ? "yes" : "no", String(describing: text ?? "nil"))
         }
         #endif
