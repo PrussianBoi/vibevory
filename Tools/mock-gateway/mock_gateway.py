@@ -1130,6 +1130,58 @@ ROOMS: list = []
 ROOM_LOGS: dict = {}
 
 
+
+# ── Workflows (Dev's desktop plugin's backend, /api/plugins/workflows/…), for the native plugin shot ──
+
+def _wf_agent(n, label, status, model, took, tokens, **extra):
+    now = time.time()
+    a = {"n": n, "label": label, "status": status, "model": model, "tokens": tokens,
+         "started_at": (now - took) if status != "queued" else None,
+         "ended_at": now if status in ("done", "cached", "failed") else None,
+         "prompt": f"{label}.", "phase": "Refactor modules"}
+    a.update(extra)
+    return a
+
+def _wf_runs():
+    return [
+        {"id": "wf_8c21", "name": "Refactor the auth module", "status": "running", "elapsed": 372, "origin": "chat",
+         "totals": {"agents": 20, "done": 12, "lost": 1, "running": 3, "tokens": 184000}},
+        {"id": "wf_77a0", "name": "Research local LLM serving", "status": "completed", "elapsed": 700,
+         "totals": {"agents": 8, "done": 8, "lost": 0, "running": 0, "tokens": 96000}},
+        {"id": "wf_5b13", "name": "Audit cron jobs", "status": "failed", "elapsed": 125,
+         "totals": {"agents": 10, "done": 4, "lost": 2, "running": 0, "tokens": 31000}},
+        {"id": "wf_3e02", "name": "Summarise inbox threads", "status": "paused", "elapsed": 108,
+         "totals": {"agents": 10, "done": 3, "lost": 0, "running": 0, "tokens": 22000}},
+    ]
+
+def workflows_rest(method, base, payload):
+    sub = base[len("/api/plugins/workflows"):]
+    if method == "GET" and sub == "/runs":
+        return {"runs": _wf_runs()}
+    m = re.fullmatch(r"/runs/([^/]+)", sub)
+    if method == "GET" and m:
+        run = next((r for r in _wf_runs() if r["id"] == m.group(1)), _wf_runs()[0])
+        agents = [
+            _wf_agent(1, "Map gateway session code", "done", "sonnet-4.6", 38, 9200),
+            _wf_agent(5, "Extract SessionStore", "cached", "sonnet-4.6", 62, 14000),
+            _wf_agent(8, "Move token refresh into store", "running", "sonnet-4.6", 131, 21000, tools=["read_file", "edit_file"]),
+            _wf_agent(9, "Update gateway imports", "failed", "sonnet-4.6", 90, 12000, attempt=2, error="merge conflict in gateway/session.py"),
+            _wf_agent(14, "Tests for SessionStore", "queued", "", 0, 0),
+        ]
+        return dict(run, description="Split session handling out of the gateway and add tests",
+                    phases=[{"icon": "✔", "label": "Map the code", "group": "a", "title": "map", "done": 4, "lost": 0, "total": 4},
+                            {"icon": "◐", "label": "Refactor modules", "group": "b", "title": "refactor", "done": 5, "lost": 1, "total": 8},
+                            {"icon": "○", "label": "Write tests", "group": "c", "title": "tests", "done": 0, "lost": 0, "total": 6}],
+                    state={"started_at": time.time() - run["elapsed"], "agents": agents,
+                           "logs": [{"level": "info", "message": "Map the code finished in 1m40s"},
+                                    {"level": "warn", "message": "Agent #9 hit a merge conflict, retrying"},
+                                    {"level": "info", "message": "Phase 2 started with 8 agents"}],
+                           "script_path": "~/.hermes/workflows/refactor-auth.js"},
+                    result=None)
+    if method == "POST" and re.fullmatch(r"/runs/[^/]+/control", sub):
+        return {"outcome": "requested"}
+    return None
+
 # ── Kanban (the gateway's bundled plugin, /api/plugins/kanban/…) ─────────────────────────────
 # A board in the real shape (plugins/kanban/dashboard/plugin_api.py): a few tasks per status on
 # two boards, one running worker, a task with comments and two runs, a worker log. Writes answer
@@ -2068,6 +2120,8 @@ def _process_request(connection, request):
         result = auth
     elif method == "GET" and base == "/api/files/download":
         return files_download(query)
+    elif base.startswith("/api/plugins/workflows/") and workflows_rest(method, base, body_json) is not None:
+        result = workflows_rest(method, base, body_json if isinstance(body_json, dict) else {})
     elif base.startswith("/api/plugins/kanban/") or base.startswith("/api/audio/"):
         try:
             payload = json.loads(getattr(request, "body", b"") or b"{}")

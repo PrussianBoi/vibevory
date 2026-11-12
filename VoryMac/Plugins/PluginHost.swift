@@ -1,13 +1,13 @@
 import AppKit
+import JavaScriptCore
 import SwiftUI
 import VoryCore
-import WebKit
 
-/// Hermes Desktop's disk plugins (`~/.hermes/desktop-plugins/<id>/plugin.js`), run by the Desktop's
-/// own plugin SDK in one long-lived web view (the `PluginHost` bundle, built from the Desktop's
-/// source: see `PluginHost/README.md`). The plugins' pages show in the sidebar under Plugins and
-/// open in place of the chat. Their REST calls come back here and go out through this app's
-/// signed-in client, so they work with any sign-in the app has (token, password, browser).
+/// Hermes Desktop's disk plugins (`~/.hermes/desktop-plugins/<id>/plugin.js`), run natively: the
+/// plugin code runs in JavaScriptCore (no web view) under `plugin-runtime.js` (built from
+/// `PluginNative/`), a React renderer whose output is a plain tree. Every render comes here as a
+/// `PluginNode` tree and `PluginRenderer.swift` draws it with SwiftUI controls, so a plugin page
+/// looks like the rest of the app. Their REST calls go out through this app's signed-in client.
 @MainActor @Observable
 final class PluginHost {
     static let shared = PluginHost()
@@ -20,19 +20,24 @@ final class PluginHost {
         var order: Double
     }
 
+    struct Toast: Identifiable, Equatable {
+        let id = UUID()
+        var kind: String
+        var title: String?
+        var message: String
+    }
+
     /// The plugins' pages, for the sidebar.
     private(set) var pages: [Page] = []
     /// The plugin page in front, if any (over the chats and the app's pages).
-    var selected: Page.ID?
+    var selected: Page.ID? {
+        didSet { if selected != oldValue { mountSelected() } }
+    }
     /// Why there are no plugin pages, when it is worth saying.
     private(set) var problem: String?
-
-    /// The built bundle in the app's Resources (CI puts it there); without it, no plugins.
-    static var bundleRoot: URL? {
-        guard let r = Bundle.main.resourceURL?.appendingPathComponent("PluginHost", isDirectory: true),
-              FileManager.default.fileExists(atPath: r.appendingPathComponent("index.html").path) else { return nil }
-        return r
-    }
+    /// The latest tree of each mounted root ("page" is the page in front).
+    private(set) var trees: [String: PluginNode] = [:]
+    private(set) var toasts: [Toast] = []
 
     /// The real home folder, not a sandbox container's.
     static var pluginsDir: URL {
@@ -41,155 +46,259 @@ final class PluginHost {
         return URL(fileURLWithPath: home).appendingPathComponent(".hermes/desktop-plugins", isDirectory: true)
     }
 
-    private(set) var webView: WKWebView?
+    @ObservationIgnored private var context: JSContext?
     @ObservationIgnored private weak var runtime: GatewayRuntime?
-    @ObservationIgnored private var gatewayBase = ""
-    @ObservationIgnored private var started = false
+    @ObservationIgnored private var timers: [Int: Timer] = [:]
     @ObservationIgnored private var mountedPath: String?
 
-    /// Starts (or restarts) the host for the gateway in use.
+    /// Starts (or restarts) the plugins for the gateway in use.
     func attach(_ runtime: GatewayRuntime?) {
         guard runtime !== self.runtime else { return }
         self.runtime = runtime
-        started = false
-        mountedPath = nil
-        pages = []
-        selected = nil
-        guard let runtime, let root = Self.bundleRoot else {
-            webView = nil
-            if runtime != nil { problem = "This build has no plugin host." }
+        stop()
+        guard let runtime else { return }
+        let plugins = Self.diskPlugins()
+        guard !plugins.isEmpty else { return }
+        guard let url = Bundle.main.url(forResource: "plugin-runtime", withExtension: "js"),
+              let source = try? String(contentsOf: url, encoding: .utf8) else {
+            problem = "This build has no plugin runtime."
             return
         }
-        let plugins = Self.diskPlugins()
-        guard !plugins.isEmpty else { webView = nil; problem = nil; return }
-        let web = webView ?? makeWebView(root: root)
-        webView = web
-        Task { await start(runtime: runtime, plugins: plugins, in: web) }
+        let ctx = makeContext()
+        context = ctx
+        ctx.evaluateScript(source, withSourceURL: url)
+        if let e = ctx.exception {
+            problem = "Plugins didn't start: \(e)"
+            context = nil
+            return
+        }
+        let start: [String: Any] = ["profile": runtime.selectedProfile ?? "default", "gateway": "open"]
+        vibe("start")?.call(withArguments: [start])
+        var failed: [String] = []
+        for (id, code) in plugins {
+            let r = vibe("load")?.call(withArguments: [id, code])
+            if r?.forProperty("ok")?.toBool() != true {
+                failed.append(id)
+                NSLog("[plugins] %@ didn't load: %@", id, r?.forProperty("error")?.toString() ?? "?")
+            }
+        }
+        problem = failed.isEmpty ? nil : "Didn't load: " + failed.joined(separator: ", ")
+        refreshPages()
+        mountSelected()
     }
 
     /// Shows a plugin page.
     func open(_ page: Page) {
         selected = page.id
-        mount(page.path)
     }
 
-    private func mount(_ path: String) {
-        guard started, mountedPath != path, let webView else { return }
-        mountedPath = path
-        webView.evaluateJavaScript("window.VibePluginHost.mount({kind:'route',path:\(Self.js(path))})")
-        #if DEBUG
-        Task {
-            try? await Task.sleep(for: .seconds(3))
-            let text = try? await webView.evaluateJavaScript("document.body.innerText.slice(0,300)+' | html '+document.body.innerHTML.length+' | '+location.href+' | '+document.body.scrollWidth+'x'+document.body.scrollHeight+' | vis '+document.visibilityState")
-            NSLog("[plugins] occlusion visible=%@ alpha=%f hidden=%@ layer=%@", webView.window?.occlusionState.contains(.visible) == true ? "yes" : "no", webView.alphaValue, webView.isHiddenOrHasHiddenAncestor ? "yes" : "no", webView.layer.map { "\($0.opacity) \($0.isHidden)" } ?? "none")
-            if let image = try? await webView.takeSnapshot(configuration: nil),
-               let tiff = image.tiffRepresentation, let rep = NSBitmapImageRep(data: tiff),
-               let png = rep.representation(using: .png, properties: [:]) {
-                try? png.write(to: URL(fileURLWithPath: NSTemporaryDirectory()).appendingPathComponent("vibe-plugin-snapshot.png"))
-            }
-            NSLog("[plugins] tmp %@", NSTemporaryDirectory())
-            NSLog("[plugins] mounted %@: frame %@ window %@ text: %@", path, NSStringFromRect(webView.frame), webView.window != nil ? "yes" : "no", String(describing: text ?? "nil"))
-        }
-        #endif
+    /// Runs a palette command a plugin registered.
+    func runPalette(_ id: String) {
+        vibe("runPalette")?.call(withArguments: [id])
+    }
+
+    /// A native control's event, back to the plugin (`args` as its handler gets them).
+    func dispatch(_ handler: String, _ args: [Any] = [["$event": true]]) {
+        guard let data = try? JSONSerialization.data(withJSONObject: args),
+              let json = String(data: data, encoding: .utf8) else { return }
+        vibe("dispatch")?.call(withArguments: [handler, json])
+    }
+
+    func dismissToast(_ id: Toast.ID) {
+        withAnimation(.smooth) { toasts.removeAll { $0.id == id } }
     }
 
     // MARK: Setup
 
-    private static func diskPlugins() -> [[String: Any]] {
+    private func stop() {
+        timers.values.forEach { $0.invalidate() }
+        timers = [:]
+        context = nil
+        trees = [:]
+        pages = []
+        mountedPath = nil
+        selected = nil
+        problem = nil
+    }
+
+    private func mountSelected() {
+        guard context != nil else { return }
+        guard let path = selected else {
+            if mountedPath != nil {
+                vibe("unmount")?.call(withArguments: ["page"])
+                trees["page"] = nil
+                mountedPath = nil
+            }
+            return
+        }
+        guard mountedPath != path else { return }
+        mountedPath = path
+        trees["page"] = nil
+        vibe("mount")?.call(withArguments: ["page", "route", path])
+    }
+
+    private static func diskPlugins() -> [(String, String)] {
         let dir = pluginsDir
         let ids = (try? FileManager.default.contentsOfDirectory(atPath: dir.path)) ?? []
         return ids.sorted().compactMap { id in
             let file = dir.appendingPathComponent(id).appendingPathComponent("plugin.js")
             guard let source = try? String(contentsOf: file, encoding: .utf8) else { return nil }
-            return ["id": id, "source": source, "file": file.path]
+            return (id, source)
         }
     }
 
-    private func makeWebView(root: URL) -> WKWebView {
-        let config = WKWebViewConfiguration()
-        config.setURLSchemeHandler(BundleScheme(root: root), forURLScheme: BundleScheme.scheme)
-        let content = config.userContentController
-        content.add(MessageRelay(host: self), name: "vibe")
-        // Smoke over the window's aurora, as the rest of the app, not the Desktop's flat black.
-        let css = """
-        html,body,#root{background:transparent!important}
-        .bg-background{background-color:rgba(12,14,30,.38)!important}
-        """
-        content.addUserScript(WKUserScript(
-            source: "(()=>{const s=document.createElement('style');s.textContent=\(Self.js(css));document.documentElement.appendChild(s)})()",
-            injectionTime: .atDocumentEnd, forMainFrameOnly: true))
-        let web = WKWebView(frame: .zero, configuration: config)
-        #if DEBUG
-        // `-vibe-plugin-opaque`: the page painted, to tell a hidden view from a clear one (CI).
-        let clear = !ProcessInfo.processInfo.arguments.contains("-vibe-plugin-opaque")
-        #else
-        let clear = true
-        #endif
-        if clear { web.setValue(false, forKey: "drawsBackground") }
-        web.underPageBackgroundColor = .clear
-        #if DEBUG
-        web.isInspectable = true
-        #endif
-        return web
+    private func vibe(_ name: String) -> JSValue? {
+        context?.objectForKeyedSubscript("__vibe")?.objectForKeyedSubscript(name)
     }
 
-    @ObservationIgnored private var loaded: CheckedContinuation<Void, Never>?
+    private func makeContext() -> JSContext {
+        let ctx = JSContext()!
+        ctx.name = "Artha plugins"
+        ctx.exceptionHandler = { _, e in NSLog("[plugins] JS exception: %@", e?.toString() ?? "?") }
+        let native = JSValue(newObjectIn: ctx)!
+        let send: @convention(block) (String, String) -> Void = { [weak self] type, json in
+            MainActor.assumeIsolated { self?.received(type, json) }
+        }
+        let call: @convention(block) (String, String, String) -> Void = { [weak self] type, json, id in
+            MainActor.assumeIsolated { self?.request(type, json, id) }
+        }
+        let setTimer: @convention(block) (Int, Double, Bool) -> Void = { [weak self] id, ms, repeats in
+            MainActor.assumeIsolated { self?.setTimer(id, ms, repeats) }
+        }
+        let clearTimer: @convention(block) (Int) -> Void = { [weak self] id in
+            MainActor.assumeIsolated { _ = self?.timers.removeValue(forKey: id).map { $0.invalidate() } }
+        }
+        let storageGet: @convention(block) (String) -> Any = { key in
+            UserDefaults.standard.string(forKey: "vibe.plugin." + key) ?? NSNull()
+        }
+        let storageSet: @convention(block) (String, JSValue) -> Void = { key, value in
+            if value.isNull || value.isUndefined { UserDefaults.standard.removeObject(forKey: "vibe.plugin." + key) }
+            else { UserDefaults.standard.set(value.toString(), forKey: "vibe.plugin." + key) }
+        }
+        native.setObject(send, forKeyedSubscript: "send" as NSString)
+        native.setObject(call, forKeyedSubscript: "call" as NSString)
+        native.setObject(setTimer, forKeyedSubscript: "setTimer" as NSString)
+        native.setObject(clearTimer, forKeyedSubscript: "clearTimer" as NSString)
+        native.setObject(storageGet, forKeyedSubscript: "storageGet" as NSString)
+        native.setObject(storageSet, forKeyedSubscript: "storageSet" as NSString)
+        ctx.setObject(native, forKeyedSubscript: "__native" as NSString)
+        return ctx
+    }
 
-    private func start(runtime: GatewayRuntime, plugins: [[String: Any]], in web: WKWebView) async {
-        let signer = await runtime.api.signer
-        gatewayBase = await runtime.api.gateway.base.absoluteString
-        while gatewayBase.hasSuffix("/") { gatewayBase.removeLast() }
-        // Load once the view is in the window (PluginPageArea places it), not before.
-        for _ in 0..<50 where web.window == nil { try? await Task.sleep(for: .milliseconds(100)) }
-        if web.url == nil {
-            await withCheckedContinuation { c in
-                loaded = c
-                web.load(URLRequest(url: URL(string: "\(BundleScheme.scheme)://host/index.html")!))
+    private func setTimer(_ id: Int, _ ms: Double, _ repeats: Bool) {
+        timers[id]?.invalidate()
+        let timer = Timer(timeInterval: max(ms, 1) / 1000, repeats: repeats) { [weak self] _ in
+            MainActor.assumeIsolated {
+                guard let self else { return }
+                if !repeats { self.timers[id] = nil }
+                self.vibe("fire")?.call(withArguments: [id])
             }
         }
-        guard runtime === self.runtime else { return }
-        let bearer = signer.authMode.usesBearer
-        let options: [String: Any] = [
-            "gatewayUrl": gatewayBase,
-            "token": (bearer ? signer.bearer : signer.sessionToken) ?? "",
-            "profile": runtime.selectedProfile ?? "default",
-            "auth": bearer ? "bearer" : "session-token",
-            "transport": "native",
-            "inPageToasts": true,
-            "plugins": plugins,
-        ]
-        guard let json = try? JSONSerialization.data(withJSONObject: options),
-              let text = String(data: json, encoding: .utf8) else { return }
+        timers[id] = timer
+        RunLoop.main.add(timer, forMode: .common)
+    }
+
+    // MARK: Messages from the plugins
+
+    private func received(_ type: String, _ json: String) {
+        let m = (try? JSONSerialization.jsonObject(with: Data(json.utf8))) as? [String: Any] ?? [:]
+        switch type {
+        case "render":
+            guard let root = m["root"] as? String, let tree = m["tree"] else { return }
+            trees[root] = PluginNode(tree)
+        case "contributions":
+            refreshPages()
+        case "toast":
+            let toast = Toast(kind: m["kind"] as? String ?? "info", title: m["title"] as? String,
+                              message: m["message"] as? String ?? "")
+            withAnimation(.smooth) { toasts.append(toast) }
+            Task { [weak self] in
+                try? await Task.sleep(for: .seconds(4))
+                self?.dismissToast(toast.id)
+            }
+        case "navigate":
+            if let path = m["path"] as? String, let page = pages.first(where: { path.hasPrefix($0.path) }) {
+                selected = page.id
+            }
+        case "openSession":
+            if let sid = m["sessionId"] as? String {
+                selected = nil
+                ChatNavigation.onSelect?(ChatRoute(storedID: sid))
+            }
+        case "openExternal":
+            if let s = m["url"] as? String, let url = URL(string: s) { NSWorkspace.shared.open(url) }
+        case "clipboard":
+            NSPasteboard.general.clearContents()
+            NSPasteboard.general.setString(m["text"] as? String ?? "", forType: .string)
+        case "revealPath":
+            if let p = m["path"] as? String { NSWorkspace.shared.activateFileViewerSelecting([URL(fileURLWithPath: p)]) }
+        case "log":
+            NSLog("[plugins] js %@: %@", m["level"] as? String ?? "log", String((m["text"] as? String ?? "").prefix(500)))
+        default:
+            break
+        }
+    }
+
+    private func request(_ type: String, _ json: String, _ id: String) {
+        let m = (try? JSONSerialization.jsonObject(with: Data(json.utf8))) as? [String: Any] ?? [:]
+        Task {
+            let result: [String: Any]
+            switch type {
+            case "api": result = await forward(m)
+            case "rpc": result = await rpc(m)
+            default: result = ["error": "Not available in this app: \(type)"]
+            }
+            guard let data = try? JSONSerialization.data(withJSONObject: result),
+                  let text = String(data: data, encoding: .utf8) else { return }
+            vibe("resolve")?.call(withArguments: [id, true, text])
+        }
+    }
+
+    /// A plugin's REST call, through the app's own client: its sign-in, renewal and Access headers.
+    private func forward(_ m: [String: Any]) async -> [String: Any] {
+        guard let api = runtime?.api, let path = m["path"] as? String,
+              let comps = URLComponents(string: path.hasPrefix("/") ? path : "/" + path) else { return ["error": "Not connected"] }
+        let method = (m["method"] as? String) ?? "GET"
+        let body = (m["body"] as? String).map { Data($0.utf8) }
+        let request = RelayedRequest(method: method, path: comps.path, query: comps.queryItems ?? [],
+                                     body: body, contentType: body == nil ? nil : "application/json", authenticated: true)
         do {
-            let result = try await web.callAsyncJavaScript(
-                "return await window.VibePluginHost.start(\(text))", contentWorld: .page)
-            started = true
-            problem = nil
-            if let r = result as? [String: Any], let list = r["plugins"] as? [[String: Any]] {
-                let failed = list.filter { ($0["ok"] as? Bool) == false }.compactMap { $0["id"] as? String }
-                if !failed.isEmpty { problem = "Didn't load: " + failed.joined(separator: ", ") }
-            }
-            await refreshPages()
-            // A page chosen while the host was still starting.
-            if let selected { mount(selected) }
+            let r = try await api.forward(request)
+            return ["status": r.status, "body": String(decoding: r.body, as: UTF8.self)]
         } catch {
-            problem = "Plugins didn't start: \(error.localizedDescription)"
+            return ["error": error.localizedDescription]
         }
     }
 
-    private func refreshPages() async {
-        guard let webView,
-              let r = try? await webView.callAsyncJavaScript("return window.VibePluginHost.listContributions()", contentWorld: .page) as? [String: Any]
-        else { return }
-        let nav = (r["sidebarNav"] as? [[String: Any]]) ?? []
-        let routes = (r["routes"] as? [[String: Any]]) ?? []
-        let source = nav.isEmpty ? routes : nav
+    /// `host.request`: the gateway's JSON-RPC, over the app's own socket.
+    private func rpc(_ m: [String: Any]) async -> [String: Any] {
+        guard let runtime, let method = m["method"] as? String else { return ["error": "Not connected"] }
+        do {
+            let data = try JSONSerialization.data(withJSONObject: m["params"] ?? [String: Any]())
+            let params = (try? JSONDecoder().decode([String: JSONValue].self, from: data)) ?? [:]
+            let value = try await runtime.rpc(method, params)
+            let out = try JSONEncoder().encode(value)
+            return ["result": (try? JSONSerialization.jsonObject(with: out, options: .fragmentsAllowed)) ?? NSNull()]
+        } catch {
+            return ["error": error.localizedDescription]
+        }
+    }
+
+    private func refreshPages() {
+        guard let json = vibe("contributions")?.call(withArguments: [])?.toString(),
+              let list = (try? JSONSerialization.jsonObject(with: Data(json.utf8))) as? [[String: Any]] else { return }
+        let routes = Set(list.filter { $0["area"] as? String == "routes" }
+            .compactMap { ($0["data"] as? [String: Any])?["path"] as? String })
+        let nav = list.filter { $0["area"] as? String == "sidebar.nav" }
+        let source = nav.isEmpty ? list.filter { $0["area"] as? String == "routes" } : nav
         var seen = Set<String>()
         pages = source.compactMap { c in
-            guard let path = c["path"] as? String, seen.insert(path).inserted else { return nil }
-            let title = (c["label"] as? String) ?? (c["title"] as? String) ?? (c["plugin"] as? String) ?? path
-            return Page(id: path, title: title, symbol: Self.symbol(c["icon"] as? String),
-                        path: path, order: (c["order"] as? Double) ?? 0)
+            let data = c["data"] as? [String: Any] ?? [:]
+            guard let path = data["path"] as? String, routes.contains(path), seen.insert(path).inserted else { return nil }
+            let title = (data["label"] as? String) ?? (c["title"] as? String) ?? (c["plugin"] as? String) ?? path
+            let icon = (data["codicon"] as? String) ?? (data["icon"] as? String)
+            return Page(id: path, title: title, symbol: PluginSymbols.symbol(icon), path: path,
+                        order: (c["order"] as? Double) ?? 0)
         }
         .sorted { ($0.order, $0.title) < ($1.order, $1.title) }
         if let selected, !pages.contains(where: { $0.id == selected }) { self.selected = nil }
@@ -202,197 +311,129 @@ final class PluginHost {
         }
         #endif
     }
+}
 
-    // MARK: Messages from the page
+/// One node of a plugin's rendered tree: an element (`div`, `Button`, …) or a run of text.
+struct PluginNode: Identifiable {
+    let id: Int
+    let type: String
+    let props: [String: Any]
+    let children: [PluginNode]
+    let text: String?
 
-    fileprivate func received(_ body: Any) {
-        guard let m = body as? [String: Any], let type = m["type"] as? String else { return }
-        #if DEBUG
-        if type != "api" { NSLog("[plugins] %@ %@", type, String(String(describing: m).prefix(300))) }
-        #endif
-        let id = m["requestId"] as? String
-        switch type {
-        case "loaded":
-            loaded?.resume(); loaded = nil
-        case "contributions", "contributionsChanged", "ready":
-            Task { await refreshPages() }
-        case "api":
-            guard let id else { return }
-            Task { resolve(id, await forward(m)) }
-        case "navigate":
-            if let path = m["path"] as? String, let page = pages.first(where: { path.hasPrefix($0.path) }) {
-                selected = page.id
-                mountedPath = path
-            }
-        case "openExternal":
-            if let s = m["url"] as? String, let url = URL(string: s) { NSWorkspace.shared.open(url) }
-        case "clipboard.write":
-            NSPasteboard.general.clearContents()
-            NSPasteboard.general.setString(m["text"] as? String ?? "", forType: .string)
-        case "revealPath":
-            if let p = m["path"] as? String { NSWorkspace.shared.activateFileViewerSelecting([URL(fileURLWithPath: p)]) }
-        case "openSession":
-            if let sid = m["sessionId"] as? String {
-                selected = nil
-                ChatNavigation.onSelect?(ChatRoute(storedID: sid))
-            }
-        case "pickOpenPath":
-            guard let id else { return }
-            let panel = NSOpenPanel()
-            panel.allowsMultipleSelection = true
-            panel.canChooseDirectories = true
-            resolve(id, panel.runModal() == .OK ? panel.urls.map(\.path) : [String]())
-        case "pickSavePath":
-            guard let id else { return }
-            let panel = NSSavePanel()
-            let picked: Any = panel.runModal() == .OK ? (panel.url?.path as Any? ?? NSNull()) : NSNull()
-            resolve(id, picked)
-        default:
-            break
-        }
+    init(_ any: Any, index: Int = 0) {
+        let m = any as? [String: Any] ?? [:]
+        type = m["t"] as? String ?? "#text"
+        text = m["s"] as? String
+        // Text runs have no id of their own: keep them apart from element ids.
+        id = (m["i"] as? Int) ?? -(index + 1)
+        props = m["p"] as? [String: Any] ?? [:]
+        children = (m["c"] as? [Any] ?? []).enumerated().map { PluginNode($0.element, index: $0.offset) }
     }
 
-    /// A plugin's REST call, through the app's own client: its sign-in, renewal and Access headers.
-    private func forward(_ m: [String: Any]) async -> [String: Any] {
-        guard let api = runtime?.api, let urlString = m["url"] as? String else { return ["error": "Not connected"] }
-        let rest = urlString.hasPrefix(gatewayBase) ? String(urlString.dropFirst(gatewayBase.count)) : urlString
-        guard let comps = URLComponents(string: rest.hasPrefix("/") ? rest : "/" + rest) else { return ["error": "Bad URL"] }
-        let method = (m["method"] as? String) ?? "GET"
-        var body: Data?
-        var contentType: String?
-        if let b64 = m["bodyBase64"] as? String, let bytes = Data(base64Encoded: b64) {
-            let boundary = "vibe-\(UUID().uuidString)"
-            let name = (m["uploadFilename"] as? String) ?? "file"
-            let type = (m["uploadContentType"] as? String) ?? "application/octet-stream"
-            var d = Data("--\(boundary)\r\nContent-Disposition: form-data; name=\"file\"; filename=\"\(name)\"\r\nContent-Type: \(type)\r\n\r\n".utf8)
-            d.append(bytes)
-            d.append(Data("\r\n--\(boundary)--\r\n".utf8))
-            body = d
-            contentType = "multipart/form-data; boundary=\(boundary)"
-        } else if let s = m["body"] as? String {
-            body = Data(s.utf8)
-            contentType = "application/json"
-        }
-        let request = RelayedRequest(method: method, path: comps.path, query: comps.queryItems ?? [],
-                                     body: body, contentType: contentType, authenticated: true)
-        do {
-            let r = try await api.forward(request)
-            return ["status": r.status, "body": String(decoding: r.body, as: UTF8.self)]
-        } catch {
-            return ["error": error.localizedDescription]
-        }
+    var isText: Bool { type == "#text" }
+    var className: String { props["className"] as? String ?? "" }
+
+    func string(_ key: String) -> String? {
+        if let s = props[key] as? String { return s }
+        if let n = props[key] as? NSNumber { return n.stringValue }
+        if let el = props[key] as? [String: Any], let s = el["$el"] as? String { return s }
+        return nil
     }
 
-    private func resolve(_ id: String, _ value: Any) {
-        guard let webView,
-              let data = try? JSONSerialization.data(withJSONObject: ["v": value]),
-              let text = String(data: data, encoding: .utf8) else { return }
-        webView.evaluateJavaScript("window.VibePluginHost.resolveNative(\(Self.js(id)),(\(text)).v)")
-    }
+    func bool(_ key: String) -> Bool { (props[key] as? NSNumber)?.boolValue ?? false }
+    func handler(_ key: String) -> String? { (props[key] as? [String: Any])?["$fn"] as? String }
 
-    // MARK: Helpers
+    /// All the text inside, flattened.
+    var plainText: String { text ?? children.map(\.plainText).joined() }
+}
 
-    private static func js(_ s: String) -> String {
-        let data = (try? JSONSerialization.data(withJSONObject: [s])) ?? Data("[\"\"]".utf8)
-        return String(decoding: data.dropFirst().dropLast(), as: UTF8.self)
-    }
-
+enum PluginSymbols {
     /// The Desktop's codicon names, as SF Symbols.
-    private static func symbol(_ codicon: String?) -> String {
+    static func symbol(_ codicon: String?) -> String {
         switch codicon ?? "" {
-        case "play", "run-all", "debug-start": return "play.circle"
-        case "checklist", "tasklist", "check-all": return "checklist"
-        case "search", "telescope", "book": return "text.magnifyingglass"
-        case "code", "file-code", "terminal": return "chevron.left.forwardslash.chevron.right"
-        case "graph", "pulse", "dashboard": return "chart.xyaxis.line"
-        case "beaker": return "flask"
-        case "rocket": return "paperplane"
-        case "workflow", "git-merge", "type-hierarchy": return "point.3.connected.trianglepath.dotted"
-        case "calendar": return "calendar"
-        case "settings-gear", "gear": return "gearshape"
-        default: return "puzzlepiece.extension"
+        case "play", "run-all", "debug-start": "play.circle"
+        case "checklist", "tasklist", "check-all": "checklist"
+        case "check": "checkmark"
+        case "search", "telescope": "magnifyingglass"
+        case "book": "book"
+        case "code", "file-code": "chevron.left.forwardslash.chevron.right"
+        case "terminal": "terminal"
+        case "graph", "pulse", "dashboard": "chart.xyaxis.line"
+        case "beaker": "flask"
+        case "rocket": "paperplane"
+        case "workflow", "git-merge", "type-hierarchy": "point.3.connected.trianglepath.dotted"
+        case "git-branch": "arrow.triangle.branch"
+        case "calendar": "calendar"
+        case "settings-gear", "gear", "settings": "gearshape"
+        case "add", "plus": "plus"
+        case "close", "x": "xmark"
+        case "trash": "trash"
+        case "edit", "pencil": "pencil"
+        case "refresh", "sync": "arrow.clockwise"
+        case "chevron-right": "chevron.right"
+        case "chevron-down": "chevron.down"
+        case "chevron-left": "chevron.left"
+        case "chevron-up": "chevron.up"
+        case "arrow-right": "arrow.right"
+        case "arrow-left": "arrow.left"
+        case "debug-pause": "pause"
+        case "debug-stop", "primitive-square": "stop"
+        case "inbox": "tray"
+        case "archive": "archivebox"
+        case "folder", "folder-opened": "folder"
+        case "file", "file-text", "note": "doc.text"
+        case "link", "link-external": "arrow.up.right.square"
+        case "copy": "doc.on.doc"
+        case "star", "star-empty": "star"
+        case "star-full": "star.fill"
+        case "warning": "exclamationmark.triangle"
+        case "error": "xmark.octagon"
+        case "info": "info.circle"
+        case "pass", "pass-filled": "checkmark.circle"
+        case "circle-large-outline", "circle-outline": "circle"
+        case "loading", "sync~spin": "arrow.triangle.2.circlepath"
+        case "filter": "line.3.horizontal.decrease"
+        case "list-unordered", "list-flat": "list.bullet"
+        case "person", "account": "person"
+        case "comment", "comment-discussion": "bubble.left"
+        case "eye": "eye"
+        case "clock", "history", "watch": "clock"
+        case "lightbulb": "lightbulb"
+        case "tag": "tag"
+        case "globe": "globe"
+        case "save": "square.and.arrow.down"
+        case "ellipsis", "kebab-vertical": "ellipsis"
+        case "zap", "symbol-event": "bolt"
+        case "sparkle": "sparkles"
+        case "credit-card": "creditcard"
+        default: "puzzlepiece.extension"
         }
     }
 }
 
-/// The page's messages, to the host (a separate object: the content controller keeps it strongly).
-private final class MessageRelay: NSObject, WKScriptMessageHandler {
-    weak var host: PluginHost?
-    init(host: PluginHost) { self.host = host }
-
-    func userContentController(_ controller: WKUserContentController, didReceive message: WKScriptMessage) {
-        let body = message.body
-        MainActor.assumeIsolated { host?.received(body) }
-    }
-}
-
-/// Serves the bundle at `vibe-plugins://host/…`: a real origin, so the plugins' `import()` of
-/// their own source (as blobs) is allowed, which file:// pages may not be.
-private final class BundleScheme: NSObject, WKURLSchemeHandler {
-    static let scheme = "vibe-plugins"
-    let root: URL
-    init(root: URL) { self.root = root.standardizedFileURL }
-
-    func webView(_ webView: WKWebView, start task: any WKURLSchemeTask) {
-        guard let url = task.request.url else { return }
-        var path = url.path
-        if path.isEmpty || path == "/" { path = "/index.html" }
-        let file = root.appendingPathComponent(String(path.dropFirst())).standardizedFileURL
-        guard file.path.hasPrefix(root.path), let data = try? Data(contentsOf: file) else {
-            task.didFailWithError(URLError(.fileDoesNotExist))
-            return
-        }
-        let types = ["html": "text/html", "js": "text/javascript", "css": "text/css", "woff2": "font/woff2",
-                     "woff": "font/woff", "ttf": "font/ttf", "svg": "image/svg+xml", "png": "image/png", "json": "application/json"]
-        let type = types[file.pathExtension.lowercased()] ?? "application/octet-stream"
-        let response = HTTPURLResponse(url: url, statusCode: 200, httpVersion: "HTTP/1.1",
-                                       headerFields: ["Content-Type": type, "Content-Length": "\(data.count)"])!
-        task.didReceive(response)
-        task.didReceive(data)
-        task.didFinish()
-    }
-
-    func webView(_ webView: WKWebView, stop task: any WKURLSchemeTask) {}
-}
-
-/// The web view, in SwiftUI.
-struct PluginSurface: NSViewRepresentable {
-    var webView: WKWebView
-    func makeNSView(context: Context) -> NSView {
-        let box = NSView()
-        place(in: box)
-        return box
-    }
-    func updateNSView(_ box: NSView, context: Context) {
-        if webView.superview !== box { place(in: box) }
-    }
-    private func place(in box: NSView) {
-        webView.removeFromSuperview()
-        webView.translatesAutoresizingMaskIntoConstraints = false
-        box.addSubview(webView)
-        NSLayoutConstraint.activate([
-            webView.leadingAnchor.constraint(equalTo: box.leadingAnchor),
-            webView.trailingAnchor.constraint(equalTo: box.trailingAnchor),
-            webView.topAnchor.constraint(equalTo: box.topAnchor),
-            webView.bottomAnchor.constraint(equalTo: box.bottomAnchor),
-        ])
-    }
-}
-
-/// The plugin page in front, over the chat.
+/// The plugin page in front, over the chat, drawn natively.
 struct PluginPageArea: View {
     @State private var host = PluginHost.shared
 
     var body: some View {
-        // Always in the window once there is a host, hidden until a page is chosen: a web view
-        // that loads before it is in a window paints (its snapshot is right) but never shows.
-        if let web = host.webView {
-            let shown = host.selected != nil
-            PluginSurface(webView: web)
-                .ignoresSafeArea(.container, edges: .top)
-                .opacity(shown ? 1 : 0)
-                .allowsHitTesting(shown)
-                .accessibilityHidden(!shown)
+        if host.selected != nil {
+            ZStack(alignment: .bottomTrailing) {
+                Group {
+                    if let tree = host.trees["page"] {
+                        PluginRootView(node: tree)
+                    } else {
+                        ProgressView().controlSize(.small).frame(maxWidth: .infinity, maxHeight: .infinity)
+                    }
+                }
+                .padding(.top, 44)
+                VStack(alignment: .trailing, spacing: 8) {
+                    ForEach(host.toasts) { t in PluginToastView(toast: t) }
+                }
+                .padding(18)
+            }
+            .ignoresSafeArea(.container, edges: .top)
+            .transition(.opacity)
         }
     }
 }

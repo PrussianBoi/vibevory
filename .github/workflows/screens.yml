@@ -33,7 +33,6 @@ jobs:
       - name: Demo copy
         run: |
           SRC="$(ls -d build/Build/Products/Debug/*.app | head -1)"
-          mkdir -p "$SRC/Contents/Resources/PluginHost" && cp -R PluginHost/dist/. "$SRC/Contents/Resources/PluginHost/"
           Tools/dev/make-demo-app.sh "$SRC" demo
 
       - name: Mock gateway
@@ -89,10 +88,12 @@ jobs:
           }
           open -a Calculator; sleep 5; screencapture -x shots/00-calculator.png; osascript -e 'quit app "Calculator"' || true
           mkdir -p ~/.hermes/desktop-plugins/hello && cp Tools/ci/hello-plugin/plugin.js ~/.hermes/desktop-plugins/hello/
+          mkdir -p ~/.hermes/desktop-plugins/workflows && cp Tools/ci/workflows-plugin/plugin.js ~/.hermes/desktop-plugins/workflows/
           shot 01-empty "" 20
           shot 02-chat "-vibe-open-chat 20260921_154212_a1b2c3" 25
           shot 03-chat-tools "-vibe-open-chat 20260921_093355_d4e5f6" 25
           shot 04-plugin "-vibe-open-plugin /hello" 25
+          shot 04b-plugin-workflows "-vibe-open-plugin /workflows" 25
           shot 05-sidebar-hidden "-vibe-sidebar hidden -vibe-open-chat 20260921_093355_d4e5f6" 25
           shot 06-sidebar-reveal "-vibe-sidebar reveal -vibe-open-chat 20260921_093355_d4e5f6" 25
           shot 07-palette "-vibe-open-palette" 25

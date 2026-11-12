@@ -1,0 +1,18 @@
+{
+  "name": "vibevory-plugin-native",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "node build.mjs",
+    "test": "node test/run.mjs"
+  },
+  "dependencies": {
+    "@tanstack/react-query": "5.101.2",
+    "nanostores": "1.4.2",
+    "react": "19.2.7",
+    "react-reconciler": "0.33.0"
+  },
+  "devDependencies": {
+    "esbuild": "0.28.1"
+  }
+}

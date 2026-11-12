@@ -37,7 +37,6 @@ jobs:
           # No extensions and no entitlements: they need Apple's provisioning. Push, widgets and
           # iCloud sync are off in this build; logins go to the login keychain.
           rm -rf "$APP/Contents/PlugIns" "$APP/Contents/embedded.provisionprofile" "$APP/Contents/_CodeSignature"
-          mkdir -p "$APP/Contents/Resources/PluginHost" && cp -R PluginHost/dist/. "$APP/Contents/Resources/PluginHost/"
           /usr/libexec/PlistBuddy -c "Set :CFBundleIdentifier dev.raturi.vibevory" "$APP/Contents/Info.plist"
           # The app is "Artha" in Finder and the Dock.
           mv "$APP" build/Build/Products/Release/Artha.app && APP=build/Build/Products/Release/Artha.app
