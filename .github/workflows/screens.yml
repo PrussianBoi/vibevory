@@ -74,6 +74,7 @@ jobs:
           shot 04-plugin "-vibe-open-plugin /hello" 25
           ls -la shots
           mkdir -p crash; cp ~/Library/Logs/DiagnosticReports/*.ips crash/ 2>/dev/null || true
+          find "$TMPDIR" /var/folders -name vibe-plugin-snapshot.png -exec cp {} shots/ \; 2>/dev/null || true
 
       - uses: actions/upload-artifact@v4
         if: always()

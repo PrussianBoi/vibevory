@@ -665,22 +665,14 @@ private struct NavRow: View {
 /// The chats beside the sidebar: the tab strip on top and the open tab's chat below it.
 private struct ChatTabsArea: View {
     @Binding var path: NavigationPath
-    @Environment(\.macPageShown) private var pageShown
     @State private var tabs = ChatTabs.shared
 
     var body: some View {
         // The tabs in the title bar, as in Hermes Desktop. Not above the chat in its frame: the
         // thread runs up under the window's toolbar (its glass), and over anything placed there.
-        ChatDetailStack(path: $path) { StartPage(path: $path) }
-            .toolbar {
-                if pageShown {
-                    ToolbarItem(placement: .navigation) {
-                        TabStrip().frame(minWidth: 120, idealWidth: 420, maxWidth: 560)
-                    }
-                    .sharedBackgroundVisibility(.hidden)
-                }
-            }
-            .toolbar(removing: .title)
+        // The start page carries them, and each chat (ChatDetailStack): a pushed view's toolbar
+        // takes the place of the stack's.
+        ChatDetailStack(path: $path) { StartPage(path: $path).modifier(ChatTabsChrome()) }
             .onChange(of: tabs.selected) { _, _ in
                 path = tabs.current?.route?.path ?? NavigationPath()
             }

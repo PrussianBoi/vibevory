@@ -62,9 +62,15 @@ struct ChatDetailStack<Placeholder: View>: View {
             placeholder()
                 .navigationDestination(for: ChatRoute.self) { route in
                     ConversationView(route: route).id(route).navigationBarBackButtonHidden(true)
+                        #if os(macOS)
+                        .modifier(ChatTabsChrome())
+                        #endif
                 }
                 .navigationDestination(for: RoomRoute.self) { r in
                     RoomView(room: r.room, initialText: r.initialText).id(r).navigationBarBackButtonHidden(true)
+                        #if os(macOS)
+                        .modifier(ChatTabsChrome())
+                        #endif
                 }
         }
     }

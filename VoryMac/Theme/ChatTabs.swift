@@ -179,3 +179,22 @@ private struct TabPill: View {
         .accessibilityAddTraits(selected ? [.isButton, .isSelected] : .isButton)
     }
 }
+
+/// The chat tabs in the window's title bar, where Hermes Desktop has them, in place of the title.
+/// Only while the Chats page is on show: it stays mounted behind the other pages.
+struct ChatTabsChrome: ViewModifier {
+    @Environment(\.macPageShown) private var pageShown
+
+    func body(content: Content) -> some View {
+        content
+            .toolbar {
+                if pageShown {
+                    ToolbarItem(placement: .navigation) {
+                        TabStrip().frame(minWidth: 120, idealWidth: 420, maxWidth: 560)
+                    }
+                    .sharedBackgroundVisibility(.hidden)
+                }
+            }
+            .toolbar(removing: .title)
+    }
+}

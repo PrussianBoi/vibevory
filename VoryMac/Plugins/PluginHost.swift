@@ -81,6 +81,12 @@ final class PluginHost {
         Task {
             try? await Task.sleep(for: .seconds(3))
             let text = try? await webView.evaluateJavaScript("document.body.innerText.slice(0,300)+' | html '+document.body.innerHTML.length+' | '+location.href+' | '+document.body.scrollWidth+'x'+document.body.scrollHeight")
+            if let image = try? await webView.takeSnapshot(configuration: nil),
+               let tiff = image.tiffRepresentation, let rep = NSBitmapImageRep(data: tiff),
+               let png = rep.representation(using: .png, properties: [:]) {
+                try? png.write(to: URL(fileURLWithPath: NSTemporaryDirectory()).appendingPathComponent("vibe-plugin-snapshot.png"))
+            }
+            NSLog("[plugins] tmp %@", NSTemporaryDirectory())
             NSLog("[plugins] mounted %@: frame %@ window %@ text: %@", path, NSStringFromRect(webView.frame), webView.window != nil ? "yes" : "no", String(describing: text ?? "nil"))
         }
         #endif
