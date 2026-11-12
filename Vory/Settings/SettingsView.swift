@@ -740,6 +740,7 @@ struct AppearanceView: View {
 
     @AppStorage(ChatStyle.headerShowsTitle) private var headerShowsTitle = false
     #if os(macOS)
+    @AppStorage("vibe.skyScene") private var skyScene = SkyScene.sunset.rawValue
     private func tabBinding(_ tab: AppModel.AppTab) -> Binding<Bool> {
         Binding(get: { layout.contains(tab) }, set: { on in var l = layout; l.set(tab, enabled: on); layoutRaw = l.encoded })
     }
@@ -778,6 +779,14 @@ struct AppearanceView: View {
                 Text("Liquid Glass intensity, Reduce Transparency, Increase Contrast, Bold Text, Dynamic Type and Reduce Motion follow \(DeviceWords.isMac ? "System Settings" : "\(DeviceWords.your)'s own settings").")
             }
             #if os(macOS)
+            Section {
+                Picker("Sky", selection: $skyScene) {
+                    ForEach(SkyScene.allCases) { Text($0.title).tag($0.rawValue) }
+                }
+                .pickerStyle(.segmented)
+            } header: { Text("Sky") } footer: {
+                Text("The live scene behind the window. It pauses while the window is in the background or Reduce Motion is on.")
+            }
             // The Mac's sidebar holds every page: a switch each, arrows for the order.
             Section {
                 ForEach(layout.tabs, id: \.self) { tab in

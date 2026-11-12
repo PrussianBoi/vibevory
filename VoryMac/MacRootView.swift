@@ -94,6 +94,8 @@ struct MacRootView: View {
 extension MacRootView {
     /// Shows the Companion prompt, once, when a gateway is up and nothing stands in its way.
     private func offerCompanion() {
+        // Not in Artha: it has no Companion of its own to offer (the Vory Companion prompt is gone).
+        guard false else { return }
         // Never for the demo (#494): it used the prompt up, and the person's own gateway was never offered it.
         guard !companionPromptShown, let rt = model.runtime, !rt.isEphemeral, model.signInPrompt.isEmpty, model.needsSignIn == nil, !model.lock.isLocked else { return }
         companionPromptShown = true
