@@ -129,11 +129,6 @@ final class PluginHost {
         web.underPageBackgroundColor = .clear
         #if DEBUG
         web.isInspectable = true
-        // `-vibe-plugin-no-occlusion`: WebKit paints even if it thinks the window is covered (CI test).
-        if ProcessInfo.processInfo.arguments.contains("-vibe-plugin-no-occlusion"),
-           web.responds(to: NSSelectorFromString("_setWindowOcclusionDetectionEnabled:")) {
-            web.setValue(false, forKey: "_windowOcclusionDetectionEnabled")
-        }
         #endif
         return web
     }
