@@ -60,8 +60,8 @@ jobs:
             echo "== $1: windows" >> app.log
             python3 -c 'import Quartz;[print(w.get("kCGWindowOwnerName"),w.get("kCGWindowName"),dict(w.get("kCGWindowBounds")),w.get("kCGWindowLayer")) for w in Quartz.CGWindowListCopyWindowInfo(0,0)]' >> app.log 2>&1 || true
             screencapture -x "shots/$1.png"
-            osascript Tools/ci/ax.applescript > "crash/ax-$1.txt" 2>&1 || true
             sample $PID 2 -file "crash/sample-$1.txt" >/dev/null 2>&1 || true
+            log show --last 1m --predicate "processID == $PID AND eventMessage CONTAINS '[plugins]' OR eventMessage CONTAINS '[layout]'" --style compact > "crash/our-$1.txt" 2>&1 || true
             log show --last 1m --style compact --predicate "processID == $PID" > "crash/log-$1.txt" 2>&1 || true
             kill $PID 2>/dev/null || true
             sleep 3

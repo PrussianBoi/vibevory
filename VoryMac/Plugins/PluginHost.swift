@@ -80,8 +80,8 @@ final class PluginHost {
         #if DEBUG
         Task {
             try? await Task.sleep(for: .seconds(3))
-            let text = try? await webView.evaluateJavaScript("document.body.innerText.slice(0,300)+' | '+location.href+' | '+document.body.scrollWidth+'x'+document.body.scrollHeight")
-            print("[plugins] mounted \(path): frame \(webView.frame) window \(webView.window != nil) text: \(text ?? "nil")")
+            let text = try? await webView.evaluateJavaScript("document.body.innerText.slice(0,300)+" | html "+document.body.innerHTML.length+' | '+location.href+' | '+document.body.scrollWidth+'x'+document.body.scrollHeight")
+            NSLog("[plugins] mounted %@: frame %@ window %@ text: %@", path, NSStringFromRect(webView.frame), webView.window != nil ? "yes" : "no", String(describing: text ?? "nil"))
         }
         #endif
     }
@@ -191,7 +191,7 @@ final class PluginHost {
     fileprivate func received(_ body: Any) {
         guard let m = body as? [String: Any], let type = m["type"] as? String else { return }
         #if DEBUG
-        if type != "api" { print("[plugins] \(type) \(String(describing: m).prefix(300))") }
+        if type != "api" { NSLog("[plugins] %@ %@", type, String(String(describing: m).prefix(300))) }
         #endif
         let id = m["requestId"] as? String
         switch type {

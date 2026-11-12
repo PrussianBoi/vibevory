@@ -672,8 +672,14 @@ private struct ChatTabsArea: View {
         // of its own frame, and as an inset the tabs went under it.
         VStack(spacing: 0) {
             TabStrip().zIndex(1)
+                #if DEBUG
+                .onGeometryChange(for: CGRect.self) { $0.frame(in: .global) } action: { NSLog("[layout] tabs %@", NSStringFromRect($0)) }
+                #endif
             // The transcript scrolls under the window's toolbar by design; here it stops at the tabs.
             ChatDetailStack(path: $path) { StartPage(path: $path) }.clipped()
+                #if DEBUG
+                .onGeometryChange(for: CGRect.self) { $0.frame(in: .global) } action: { NSLog("[layout] chat stack %@", NSStringFromRect($0)) }
+                #endif
         }
             .onChange(of: tabs.selected) { _, _ in
                 path = tabs.current?.route?.path ?? NavigationPath()
