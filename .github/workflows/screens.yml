@@ -1,0 +1,62 @@
+name: Screenshots
+
+# Builds a Debug copy, runs it against the mock gateway and saves screenshots of the window,
+# so the look can be checked without a Mac.
+on:
+  push:
+    branches: [master]
+  workflow_dispatch:
+
+concurrency:
+  group: screens-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  screens:
+    runs-on: xcode-27
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Xcode
+        run: sudo xcode-select -s "$(ls -d /Applications/Xcode_27*.app | sort -V | tail -1)"
+
+      - name: Build VoryMac Debug
+        run: |
+          set -o pipefail
+          xcodebuild -project Vory.xcodeproj -scheme VoryMac -configuration Debug \
+            -destination 'generic/platform=macOS' -derivedDataPath build \
+            CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY="" DEVELOPMENT_TEAM="" \
+            build 2>&1 | tee build.log | grep -E "error:|BUILD (SUCCEEDED|FAILED)" || true
+          test -d build/Build/Products/Debug/*.app
+
+      - name: Demo copy
+        run: Tools/dev/make-demo-app.sh "$(ls -d build/Build/Products/Debug/*.app | head -1)" demo
+
+      - name: Mock gateway
+        run: |
+          python3 -m pip install --quiet --break-system-packages websockets || python3 -m pip install --quiet websockets
+          nohup python3 Tools/mock-gateway/mock_gateway.py --port 9119 --token mock-token > mock.log 2>&1 &
+          for i in $(seq 1 30); do curl -sf http://127.0.0.1:9119/api/status >/dev/null && break; sleep 1; done
+
+      - name: Run and capture
+        run: |
+          mkdir -p shots
+          defaults write -g AppleInterfaceStyle Dark
+          demo/Vory.app/Contents/MacOS/Vory -vory-demo-gateway http://127.0.0.1:9119 mock-token Home > app.log 2>&1 &
+          sleep 25
+          screencapture -x shots/01-launch.png
+          sleep 10
+          screencapture -x shots/02-later.png
+          ls -la shots
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: screens
+          path: |
+            shots/
+            app.log
+            mock.log
+            build.log
+          retention-days: 14
