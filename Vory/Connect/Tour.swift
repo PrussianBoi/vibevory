@@ -401,7 +401,7 @@ struct TourLines: Equatable {
 
     static func lines(_ beat: TourBeat, demo: Bool) -> [String] {
         switch beat {
-        case .hello: return ["Hi, I\u{2019}m Hermes.", "I bring your Hermes agents to life as bots."]
+        case .hello: return ["Hi, I\u{2019}m Artha.", "I bring your Hermes agents to life as bots."]
         case .bots: return ["Every agent on your gateway shows up as a bot.", "Go on, tap one.", "They each get a face, a name and a title."]
         case .chat: return ["This is a chat with Sprout. Tap Send.", "Sprout\u{2019}s on it. You can watch it work.",
                             "That ring fills as the chat uses up its memory."]
@@ -626,7 +626,7 @@ struct VoryTourLayer: View, Animatable {
                             SpringKeyframe(0, duration: 0.42, spring: .smooth)
                         }
                     }
-                    .accessibilityLabel("Hermes")
+                    .accessibilityLabel("Artha")
                     .position(x: s.x, y: s.faceY)
                 // Under him, its tail pointing up at him; its height is measured for what sits under it.
                 bubble(underLine, tail: 1, shows: s.underShows)
@@ -705,7 +705,7 @@ private struct TourHelloBeat: View {
                         }
                         .buttonStyle(.glass)
                         .accessibilityShowsLargeContentViewer()
-                        .accessibilityHint("Opens Hermes with demo bots, no gateway needed.")
+                        .accessibilityHint("Opens Artha with demo bots, no gateway needed.")
                         .accessibilityIdentifier("onboarding.tryDemo.first")
                     }
                     if let onRestore {
@@ -976,7 +976,7 @@ private struct TourConnectBeat: View {
                         }
                         .buttonStyle(.glass)
                         .accessibilityShowsLargeContentViewer()
-                        .accessibilityHint("Opens Hermes with demo bots, no gateway needed.")
+                        .accessibilityHint("Opens Artha with demo bots, no gateway needed.")
                         .accessibilityIdentifier("onboarding.tryDemo")
                         Text("Demo bots stay on this device and go away when you connect.")
                             .font(.footnote).foregroundStyle(.secondary).multilineTextAlignment(.center)

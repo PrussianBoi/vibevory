@@ -24,5 +24,5 @@ struct DemoNeedsGateway: View {
 
     /// Notifications in the demo (#501): its replies and approvals are notifications while the app is open or just put
     /// away; with the app closed they need the Companion on a gateway of one's own.
-    static let notifications = "In the demo, Hermes shows its replies and approvals as notifications while it's open or just put away. To get them with Hermes closed, connect your own gateway with the Hermes Companion in Settings › Gateway."
+    static let notifications = "In the demo, Artha shows its replies and approvals as notifications while it's open or just put away. To get them with Artha closed, connect your own gateway with the Artha Companion in Settings › Gateway."
 }

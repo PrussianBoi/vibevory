@@ -38,7 +38,7 @@ struct SettingsView: View {
             Row(id: "bots", title: "Bots", symbol: "cloud.fill", color: .indigo, destination: AnyView(BotsSettingsView())),
             Row(id: "appearance", title: "Appearance", symbol: "circle.lefthalf.filled", color: .black, destination: AnyView(AppearanceView())),
             Row(id: "home", title: "Home", symbol: "house.fill", color: .blue, destination: AnyView(HomeSettingsView())),
-            Row(id: "summaries", title: "Hermes Summaries", symbol: "sparkles", color: .purple, destination: AnyView(SummariesSettingsView())),
+            Row(id: "summaries", title: "Artha Summaries", symbol: "sparkles", color: .purple, destination: AnyView(SummariesSettingsView())),
             Row(id: "voice", title: "Voice", symbol: "waveform", color: .pink, destination: AnyView(VoiceSettingsView())),
             Row(id: "siri", title: "Siri", symbol: "mic.circle.fill", color: .purple, destination: AnyView(SiriSettingsView())),
             Row(id: "companion", title: "Companion", symbol: "puzzlepiece.fill", color: .blue, destination: AnyView(CompanionView())),
@@ -71,7 +71,7 @@ struct SettingsView: View {
                                 // A picture that blinks: the live face kept the page redrawing at rest (#248).
                                 BotStill(spec: AboutView.voryBot, size: 46)
                                 VStack(alignment: .leading, spacing: 2) {
-                                    Text("Unlock Hermes's full potential").font(.headline)
+                                    Text("Unlock Artha's full potential").font(.headline)
                                     Text("Install the Companion for \(DeviceWords.companionBrings).").font(.caption).foregroundStyle(.secondary)
                                 }
                                 Spacer()
@@ -116,7 +116,7 @@ struct SettingsView: View {
                             .accessibilityIdentifier("settings.connectGateway")
                         } else if !model.store.connections.isEmpty {
                             Button { Task { await model.startDemo() } } label: { Label("Try the demo", systemImage: "sparkles") }
-                                .accessibilityHint("Opens Hermes with demo bots. Leave demo in Settings brings your gateway back.")
+                                .accessibilityHint("Opens Artha with demo bots. Leave demo in Settings brings your gateway back.")
                                 .accessibilityIdentifier("settings.tryDemo")
                         }
                         if let rt = model.runtime, !rt.profiles.isEmpty {
@@ -423,7 +423,7 @@ struct NotificationsView: View {
                 if model.isInDemo {
                     Text("The demo's notifications come from the demo itself, on \(DeviceWords.this). This switch is for your own gateway, once you leave the demo.")
                 } else {
-                    Text(notificationsOn ? "\(DeviceWords.this.capitalized) is registered with the gateway for approvals, questions, finished turns and errors while Hermes is closed." : "Off: \(DeviceWords.this) is removed from the gateway's device list, so the Companion sends it nothing. Turn it on to register again.")
+                    Text(notificationsOn ? "\(DeviceWords.this.capitalized) is registered with the gateway for approvals, questions, finished turns and errors while Artha is closed." : "Off: \(DeviceWords.this) is removed from the gateway's device list, so the Companion sends it nothing. Turn it on to register again.")
                 }
             }
             #if os(iOS)
@@ -432,7 +432,7 @@ struct NotificationsView: View {
                     .disabled(!notificationsOn)
                     .onChange(of: muteDesktopOrigin) { _, _ in Task { if let rt = model.runtime { await push.syncRegistration(runtime: rt) } } }
             } footer: {
-                Text("With Hermes for Mac on the same gateway: a chat whose last message was sent from the Mac notifies the Mac only. Send from \(DeviceWords.this) and the chat is \(DeviceWords.this)'s again. Needs Companion 1.0.35.")
+                Text("With Artha for Mac on the same gateway: a chat whose last message was sent from the Mac notifies the Mac only. Send from \(DeviceWords.this) and the chat is \(DeviceWords.this)'s again. Needs Companion 1.0.35.")
             }
             #endif
             Section {
@@ -469,7 +469,7 @@ struct NotificationsView: View {
                 NavigationLink { CompanionView().pushedPage() } label: { Label("Companion", systemImage: "puzzlepiece.extension") }
                     .disabled(model.runtime == nil)
             } footer: {
-                Text("Approvals, questions, finished turns and errors while Hermes is closed are delivered by the Companion on your gateway. In the foreground they arrive locally without it.")
+                Text("Approvals, questions, finished turns and errors while Artha is closed are delivered by the Companion on your gateway. In the foreground they arrive locally without it.")
             }
         }
         .task { await push.refreshAuthorization() }
@@ -632,7 +632,7 @@ struct SiriSettingsView: View {
                     .onChange(of: spotlight) { _, _ in Task { await SiriCatalog.syncSpotlight() } }
                     .accessibilityIdentifier("siri.spotlight")
             } footer: {
-                Text("Chat titles only, never messages. Off, nothing from Hermes shows in Spotlight.")
+                Text("Chat titles only, never messages. Off, nothing from Artha shows in Spotlight.")
             }
             Section {
                 Toggle("Let Siri answer approvals", isOn: $approvals)
@@ -641,7 +641,7 @@ struct SiriSettingsView: View {
                 Text("Off, Siri never answers an approval. On, Siri reads which bot wants to do what and asks you to confirm, only on an unlocked \(DeviceWords.this), and answers that one approval. Voice mode never answers approvals either way.")
             }
             Section {
-                Text("“Ask Hermes…”, “Ask <bot> in Hermes…”, “Talk to <bot> in Hermes”, “Open my <chat> chat in Hermes”, “New chat in Hermes”, “What is my bot doing in Hermes”, and, with the switch above on, “Answer the approval in Hermes”.")
+                Text("“Ask Artha…”, “Ask <bot> in Artha…”, “Talk to <bot> in Artha”, “Open my <chat> chat in Artha”, “New chat in Artha”, “What is my bot doing in Artha”, and, with the switch above on, “Answer the approval in Artha”.")
                     .font(.footnote).foregroundStyle(.secondary)
             } header: { Text("What to say") }
         }
@@ -660,7 +660,7 @@ struct SummariesSettingsView: View {
 
     var body: some View {
         SettingsList {
-            SettingsHeaderSection(title: "Hermes Summaries", symbol: "sparkles", color: .purple, description: "Apple Intelligence, on \(DeviceWords.this), reads each chat and writes its line in the list.")
+            SettingsHeaderSection(title: "Artha Summaries", symbol: "sparkles", color: .purple, description: "Apple Intelligence, on \(DeviceWords.this), reads each chat and writes its line in the list.")
             Section { SummaryStatusRow() } header: { Text("Now") } footer: {
                 Text("A chat's sparkle pulses in the list while its summary is being written and is steady when it is done.")
             }
@@ -958,9 +958,9 @@ struct ResetView: View {
     var body: some View {
         SettingsList {
             SettingsHeaderSection(title: "Reset", symbol: "arrow.counterclockwise", color: .red,
-                                  description: "Takes \(DeviceWords.this) back to the first screen, as if Hermes had just been installed.")
+                                  description: "Takes \(DeviceWords.this) back to the first screen, as if Artha had just been installed.")
             Section {
-                Button(role: .destructive) { confirmReset = true } label: { Label("Reset Hermes…", systemImage: "arrow.counterclockwise").foregroundStyle(.red) }
+                Button(role: .destructive) { confirmReset = true } label: { Label("Reset Artha…", systemImage: "arrow.counterclockwise").foregroundStyle(.red) }
                     .accessibilityIdentifier("settings.reset")
             } footer: {
                 Text("Every saved gateway and sign-in, every setting and every bot look is removed from \(DeviceWords.this). Your chats and bots live on the gateway and are not touched. You are asked once more before anything happens.")
@@ -968,7 +968,7 @@ struct ResetView: View {
         }
         // An alert, not an action sheet: its Cancel is on screen on every device (a popover
         // hides it), which matters with an erase among the choices.
-        .alert("Reset Hermes on \(DeviceWords.this)?", isPresented: $confirmReset) {
+        .alert("Reset Artha on \(DeviceWords.this)?", isPresented: $confirmReset) {
             Button("Reset \(DeviceWords.ThisTitle)", role: .destructive) { Task { await model.resetApp(eraseCloud: false) } }
             Button("Reset and Erase iCloud Data", role: .destructive) { Task { await model.resetApp(eraseCloud: true) } }
             Button("Cancel", role: .cancel) {}
@@ -995,7 +995,7 @@ struct AboutView: View {
 
     var body: some View {
         SettingsList {
-            SettingsHeaderSection(title: "About", symbol: "info.circle", color: .blue, description: "Version, the Hermes cloud, and what is installed.")
+            SettingsHeaderSection(title: "About", symbol: "info.circle", color: .blue, description: "Version, the Artha cloud, and what is installed.")
                 .listSectionSpacing(8)
             Section {
                 VStack(spacing: 6) {
@@ -1020,7 +1020,7 @@ struct AboutView: View {
                     .padding(.top, 16)
                     .contentShape(Rectangle())
                     .onTapGesture { tapped() }
-                    Text("Hermes").font(.title.weight(.bold))
+                    Text("Artha").font(.title.weight(.bold))
                     Text("Version \(appVersion)").font(.footnote).foregroundStyle(.secondary)
                 }
                 .frame(maxWidth: .infinity)
@@ -1040,7 +1040,7 @@ struct AboutView: View {
                 #endif
                 LabeledContent("Notification extensions", value: appVersion)
             } header: { Text("Installed") } footer: {
-                Text("What Hermes puts on your gateway and inside this app. Updates arrive under Software Update.")
+                Text("What Artha puts on your gateway and inside this app. Updates arrive under Software Update.")
             }
             Section {
                 Link(destination: URL(string: "mailto:\(Self.feedbackAddress)?subject=Vory%20feedback")!) { Label("Send feedback", systemImage: "envelope") }
@@ -1058,7 +1058,7 @@ struct AboutView: View {
                 Link(destination: URL(string: "https://vory.dev/privacy/")!) { Label("Privacy policy", systemImage: "hand.raised") }
                 // The site's name for VoiceOver, not its bare address read out letter by letter (#587).
                 Link(destination: URL(string: "https://vory.dev")!) { Label("vory.dev", systemImage: "safari") }
-                    .accessibilityLabel("Hermes website")
+                    .accessibilityLabel("Artha website")
                     .accessibilityIdentifier("about.website")
                 // Vory is open source: the code anyone can read, and the licence it is under.
                 Link(destination: Self.sourceURL) {
@@ -1070,7 +1070,7 @@ struct AboutView: View {
                 // The open-source code inside the app, and each licence in full.
                 NavigationLink { AcknowledgementsView().pushedPage() } label: { Label("Acknowledgements", systemImage: "doc.text") }
                     .accessibilityIdentifier("about.acknowledgements")
-            } header: { Text("Hermes") } footer: {
+            } header: { Text("Artha") } footer: {
                 Text("A public beta. In TestFlight, take a screenshot to send feedback with it attached.")
             }
             Section {
@@ -1171,8 +1171,8 @@ struct SoftwareUpdateView: View {
                             HStack(spacing: 12) {
                                 BotFaceView(spec: AboutView.voryBot, size: 44, active: true)
                                 VStack(alignment: .leading, spacing: 2) {
-                                    Text("Install the Hermes Companion").font(.headline)
-                                    Text("Unlocks \(DeviceWords.companionBrings) while Hermes is closed.").font(.caption).foregroundStyle(.secondary)
+                                    Text("Install the Artha Companion").font(.headline)
+                                    Text("Unlocks \(DeviceWords.companionBrings) while Artha is closed.").font(.caption).foregroundStyle(.secondary)
                                 }
                             }
                         }
@@ -1191,7 +1191,7 @@ struct SoftwareUpdateView: View {
                             CompanionInstalledRow().listRowSeparator(.hidden, edges: .top)
                         }
                     }
-                } header: { sectionHeader("Hermes Companion") } footer: {
+                } header: { sectionHeader("Artha Companion") } footer: {
                     Text("A small plugin on your gateway. It sends replies as notifications, \(DeviceWords.keepsActivity)and gets approval cards to \(DeviceWords.your) the moment a bot needs a yes. Installs in place; no restart unless it says so.")
                 }
                 Section {

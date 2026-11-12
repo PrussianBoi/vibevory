@@ -204,7 +204,7 @@ struct VoiceSettingsView: View {
                     }
                 } header: { Text("OpenAI") } footer: {
                     Text((gatewayLive?.available == false ? ((gatewayLive?.reason).map { "The gateway says: \($0). " } ?? "") : "")
-                         + "OpenAI's live voice runs through your gateway, which holds the key; the gateway's config picks the voice. Hermes's OpenAI Live comes in a later build; until then Live falls back to Standard.")
+                         + "OpenAI's live voice runs through your gateway, which holds the key; the gateway's config picks the voice. Artha's OpenAI Live comes in a later build; until then Live falls back to Standard.")
                 }
             }
             Section {
@@ -229,7 +229,7 @@ struct VoiceSettingsView: View {
                 }
                 .disabled(VoiceCoordinator.shared.isSpeaking)
             } header: { Text("Voice on \(DeviceWords.this)") } footer: {
-                Text(personalVoice == .denied ? "Personal Voice is off for Hermes in Settings › Accessibility › Personal Voice."
+                Text(personalVoice == .denied ? "Personal Voice is off for Artha in Settings › Accessibility › Personal Voice."
                      : "Used when speech is handled on \(DeviceWords.this). Automatic picks the best installed voice for your language; a Personal Voice comes first once it is allowed.")
             }
         }

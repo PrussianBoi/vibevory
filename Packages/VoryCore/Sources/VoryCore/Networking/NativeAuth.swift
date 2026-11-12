@@ -246,7 +246,7 @@ public final class LoopbackCallbackServer: @unchecked Sendable {
             guard let self, let data, let text = String(data: data, encoding: .utf8) else { conn.cancel(); return }
             let firstLine = text.split(separator: "\r\n", maxSplits: 1).first.map(String.init) ?? ""
             let parts = firstLine.split(separator: " ")
-            var body = "<html><body style=\"font-family:-apple-system;text-align:center;padding-top:4em\"><h2>Signed in</h2><p>You can return to Hermes.</p></body></html>"
+            var body = "<html><body style=\"font-family:-apple-system;text-align:center;padding-top:4em\"><h2>Signed in</h2><p>You can return to Artha.</p></body></html>"
             if parts.count >= 2, let comps = URLComponents(string: "http://127.0.0.1" + parts[1]),
                let code = comps.queryItems?.first(where: { $0.name == "code" })?.value {
                 let state = comps.queryItems?.first(where: { $0.name == "state" })?.value ?? ""

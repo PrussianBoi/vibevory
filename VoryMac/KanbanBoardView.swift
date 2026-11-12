@@ -295,7 +295,7 @@ struct MacBoardView: View {
         case .comment(let t): if !text.isEmpty { await changed(store.comment(t, text), store) }
         case .archive(let t): await changed(store.move(t, to: .archived), store)
         case .delete(let t): if selectedID == t.id { selectedID = nil }; await changed(store.delete(t), store)
-        case .stop(let t): await changed(store.stop(t, reason: "stopped from Hermes"), store)
+        case .stop(let t): await changed(store.stop(t, reason: "stopped from Artha"), store)
         }
     }
 
@@ -775,7 +775,7 @@ struct MacTaskInspector: View {
         case .comment(let t): if !text.isEmpty { await changed(store.comment(t, text)) }
         case .archive(let t): await changed(store.move(t, to: .archived))
         case .delete(let t): await changed(store.delete(t)); onClose()
-        case .stop(let t): await changed(store.stop(t, reason: "stopped from Hermes"))
+        case .stop(let t): await changed(store.stop(t, reason: "stopped from Artha"))
         }
     }
 

@@ -40,7 +40,7 @@ struct OnboardingView: View {
     #if os(macOS)
     // No Dynamic Island page: the menu bar takes that job on the Mac and gets its page with it.
     private static let basePages: [Page] = [
-        Page(title: "Hi, I'm Hermes.", says: "I'm your Hermes gateway, on your Mac. Every bot you run lives here. Step through to see what we can do together.", demo: .bots),
+        Page(title: "Hi, I'm Artha.", says: "I'm your Hermes gateway, on your Mac. Every bot you run lives here. Step through to see what we can do together.", demo: .bots),
         Page(title: "Chats that stream.", says: "Replies arrive word by word, code and tool calls render as they happen, and every chat is a real session on your gateway.", demo: .chat),
         Page(title: "A yes from anywhere.", says: "When a bot needs permission, the card lands right here. Once, for the session, always, or deny. It waits for you.", demo: .approval),
         Page(title: "Make each bot yours.", says: "Give every bot its own body, eyes and colour in the Creator Studio. They blink, glance, and move while they work.", demo: .studio),
@@ -48,7 +48,7 @@ struct OnboardingView: View {
     ]
     #else
     private static let basePages: [Page] = [
-        Page(title: "Hi, I'm Hermes.", says: "I'm your Hermes gateway, on \(DeviceWords.your). Every bot you run lives here. Swipe to see what we can do together.", demo: .bots),
+        Page(title: "Hi, I'm Artha.", says: "I'm your Hermes gateway, on \(DeviceWords.your). Every bot you run lives here. Swipe to see what we can do together.", demo: .bots),
         Page(title: "Chats that stream.", says: "Replies arrive word by word, code and tool calls render as they happen, and every chat is a real session on your gateway.", demo: .chat),
         Page(title: "A yes from anywhere.", says: "When a bot needs permission, the card lands on \(DeviceWords.your). Once, for the session, always, or deny. It waits for you.", demo: .approval),
         Page(title: "I keep you posted.", says: "A Live Activity follows every turn in the Dynamic Island, and the reply comes as a notification you can answer right there.", demo: .island),
@@ -102,7 +102,7 @@ struct OnboardingView: View {
         VStack(spacing: 0) {
             Spacer(minLength: 24)
             BotFaceView(spec: BotLookSpec.vory, size: 150, active: true, mood: BotFaceView.Mood(profile: "vory-welcome", state: .guide))
-            Text("Hermes").font(.system(size: 46, weight: .bold, design: .rounded)).padding(.top, 6)
+            Text("Artha").font(.system(size: 46, weight: .bold, design: .rounded)).padding(.top, 6)
             Text("Your Hermes bots, on \(DeviceWords.your).")
                 .font(.title3).foregroundStyle(.primary).multilineTextAlignment(.center).padding(.top, 2)
             Spacer(minLength: 24)
@@ -127,7 +127,7 @@ struct OnboardingView: View {
                     }
                     .buttonStyle(.glass)
                     .disabled(!model.demoAvailable)
-                    .accessibilityHint("Opens Hermes with demo bots, no gateway needed.")
+                    .accessibilityHint("Opens Artha with demo bots, no gateway needed.")
                     .accessibilityIdentifier("onboarding.tryDemo")
                     Button { showRestore = true } label: {
                         Label("Restore from iCloud", systemImage: "icloud.and.arrow.down").font(.headline).foregroundStyle(Color.onboardingAccent)
@@ -138,7 +138,7 @@ struct OnboardingView: View {
                 }
             }
             .frame(maxWidth: 380)
-            Text("Already use Hermes on another device? Restore brings your gateways, bot looks and settings from your own iCloud.")
+            Text("Already use Artha on another device? Restore brings your gateways, bot looks and settings from your own iCloud.")
                 .font(.footnote).foregroundStyle(.secondary).multilineTextAlignment(.center)
                 .frame(maxWidth: 380)
                 .padding(.top, 14)
@@ -198,7 +198,7 @@ struct OnboardingView: View {
                         // Past the welcome screen, the demo is still a way in (#392): Get Started led here, with no way back.
                         Button("Try a demo") { Task { await model.startDemo() } }
                             .font(.subheadline)
-                            .accessibilityHint("Opens Hermes with demo bots, no gateway needed.")
+                            .accessibilityHint("Opens Artha with demo bots, no gateway needed.")
                             .accessibilityIdentifier("onboarding.tryDemo.last")
                     } else {
                         Text(" ").font(.subheadline)
@@ -208,7 +208,7 @@ struct OnboardingView: View {
                 .padding(.horizontal, 24)
                 .padding(.bottom, 16)
             }
-            .navigationTitle("Hermes")
+            .navigationTitle("Artha")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar(.hidden, for: .navigationBar)
             .navigationDestination(isPresented: $showForm) { GatewayFormView() }
@@ -633,14 +633,14 @@ private struct SummariesDemo: View {
             .glassEffect(.regular, in: .rect(cornerRadius: 18))
             Toggle(isOn: $enabled) {
                 HStack(spacing: 6) {
-                    Text("Hermes Summaries").font(.subheadline.weight(.medium))
+                    Text("Artha Summaries").font(.subheadline.weight(.medium))
                     Text("BETA").font(.caption2.weight(.bold)).padding(.horizontal, 5).padding(.vertical, 1)
                         .background(Capsule().fill(Color.vory.opacity(0.15))).foregroundStyle(Color.vory)
                 }
             }
             .padding(.horizontal, 14).padding(.vertical, 10)
             .glassEffect(.regular, in: .rect(cornerRadius: 18))
-            Text("You can change this later in Settings › Hermes Summaries.").font(.caption).foregroundStyle(.tertiary)
+            Text("You can change this later in Settings › Artha Summaries.").font(.caption).foregroundStyle(.tertiary)
         }
         .padding(.horizontal, 4)
         .task(id: live) {

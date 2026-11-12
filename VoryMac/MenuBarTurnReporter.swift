@@ -134,7 +134,7 @@ struct TurnMenu: View {
             }
             Divider()
             HStack {
-                Button("Open Hermes") { open(nil) }.buttonStyle(.plain).font(.caption)
+                Button("Open Artha") { open(nil) }.buttonStyle(.plain).font(.caption)
                 Spacer()
                 Text(board.attention > 0 ? "\(board.attention) need\(board.attention == 1 ? "s" : "") you" : "\(board.running) working").font(.caption).foregroundStyle(.secondary)
             }
@@ -164,7 +164,7 @@ struct TurnMenu: View {
                         Button("Deny") { Task { await chat.respond(card: card, result: ["choice": "deny"]) } }
                             .buttonStyle(.bordered).controlSize(.small)
                     }
-                    Button(t.attention ? "Answer in Hermes" : "Open") { open(t.id) }
+                    Button(t.attention ? "Answer in Artha" : "Open") { open(t.id) }
                         .buttonStyle(.plain).font(.caption).foregroundStyle(.tint)
                 }
                 .padding(.top, 2)

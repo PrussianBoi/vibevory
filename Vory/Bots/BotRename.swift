@@ -32,7 +32,7 @@ enum BotRename {
             case .reserved: "That name is reserved on the gateway."
             case .taken: "A bot with this name already exists."
             case .isDefault: "The default bot's folder cannot be renamed."
-            case .connectedThroughIt: "Hermes is connected through this bot's own gateway, which the rename stops. Connect through another bot first."
+            case .connectedThroughIt: "Artha is connected through this bot's own gateway, which the rename stops. Connect through another bot first."
             case .offline: "The gateway is not reachable."
             }
         }

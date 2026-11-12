@@ -14,7 +14,7 @@ struct CloudSyncView: View {
         let summary = summaryNow
         SettingsList {
             SettingsHeaderSection(title: "iCloud Sync", symbol: "icloud.fill", color: .cyan,
-                                  description: "Your settings, bot looks and saved gateways, the same on every device signed in to your iCloud. Hermes stores none of it.")
+                                  description: "Your settings, bot looks and saved gateways, the same on every device signed in to your iCloud. Artha stores none of it.")
             Section {
                 Toggle("Sync with iCloud", isOn: Binding(get: { sync.enabled }, set: { sync.enabled = $0 }))
                     .accessibilityIdentifier("cloud.enabled")
@@ -45,7 +45,7 @@ struct CloudSyncView: View {
                     Text("Last automatic backup failed: \(why)").font(.footnote).foregroundStyle(.orange)
                 }
             } footer: {
-                Text("Once a day, when Hermes opens or in the background when the system allows, \(DeviceWords.this) backs its settings, bot looks and gateways up to your iCloud, the same as Back Up \(DeviceWords.ThisTitle) Now. Nothing leaves your iCloud; a failure is said here, not asked about.")
+                Text("Once a day, when Artha opens or in the background when the system allows, \(DeviceWords.this) backs its settings, bot looks and gateways up to your iCloud, the same as Back Up \(DeviceWords.ThisTitle) Now. Nothing leaves your iCloud; a failure is said here, not asked about.")
             }
 
             Section {
@@ -191,8 +191,8 @@ struct CloudRestoreSheet: View {
     @ViewBuilder private var empty: some View {
         Text("Nothing in iCloud yet").font(.title3.weight(.semibold))
         Text(sync.signedIn
-             ? "There is no Hermes backup in this iCloud account. Once Hermes is set up on one device, the others can restore from it."
-             : "\(DeviceWords.This) does not appear to be signed in to iCloud, or iCloud Drive is off for it. Sign in in \(DeviceWords.settings), or set Hermes up fresh.")
+             ? "There is no Artha backup in this iCloud account. Once Artha is set up on one device, the others can restore from it."
+             : "\(DeviceWords.This) does not appear to be signed in to iCloud, or iCloud Drive is off for it. Sign in in \(DeviceWords.settings), or set Artha up fresh.")
             .font(.callout).foregroundStyle(.secondary).multilineTextAlignment(.center)
         Button { dismiss() } label: { Text("OK").font(.headline).frame(maxWidth: .infinity).padding(.vertical, 6) }
             .buttonStyle(.glass)
@@ -201,7 +201,7 @@ struct CloudRestoreSheet: View {
 
     @ViewBuilder private func found(_ s: CloudSummary) -> some View {
         // The name Home greets them by comes back with the rest; saying it shows whose backup this is.
-        Text(s.name.map { "Welcome back, \($0)" } ?? "Found your Hermes").font(.title3.weight(.semibold))
+        Text(s.name.map { "Welcome back, \($0)" } ?? "Found your Artha").font(.title3.weight(.semibold))
         if let device = s.device, let date = s.date {
             Text("Last changed on \(device), \(date.formatted(date: .abbreviated, time: .shortened))").font(.callout).foregroundStyle(.secondary)
         }

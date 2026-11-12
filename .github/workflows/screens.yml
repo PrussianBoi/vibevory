@@ -73,7 +73,7 @@ jobs:
             t osascript -e 'tell application id "com.vorantx.vory.demo" to activate' || true
             sleep 2
             # No window yet: ask for it from the Window menu, as a person would.
-            t osascript -e 'tell application "System Events" to tell (first process whose bundle identifier is "com.vorantx.vory.demo") to click (first menu item of menu "Window" of menu bar 1 whose name starts with "Hermes")' >> app.log 2>&1 || true
+            t osascript -e 'tell application "System Events" to tell (first process whose bundle identifier is "com.vorantx.vory.demo") to click (first menu item of menu "Window" of menu bar 1 whose name starts with "Artha")' >> app.log 2>&1 || true
             sleep 4
             # Fill the screen, as the app would sit on a MacBook Air.
             t osascript -e 'tell application "Finder" to set b to bounds of window of desktop' -e 'tell application "System Events" to tell (first process whose bundle identifier is "com.vorantx.vory.demo") to tell window 1 to set {position, size} to {{0, 30}, {(item 3 of b), (item 4 of b) - 30}}' >> app.log 2>&1 || true

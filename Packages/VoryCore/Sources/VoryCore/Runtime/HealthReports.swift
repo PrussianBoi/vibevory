@@ -257,7 +257,7 @@ public final class HealthReportStore: @unchecked Sendable {
     /// The page's Copy: plain text, the counts and the reports, nothing else.
     public func copyText() -> String {
         let s = snapshot
-        var lines = ["Hermes crash and freeze reports, kept on this device"]
+        var lines = ["Artha crash and freeze reports, kept on this device"]
         if let first = s.windows.first, let last = s.windows.last {
             lines.append("Counts from \(Self.day(first.begin)) to \(Self.day(last.end))")
         }
@@ -269,7 +269,7 @@ public final class HealthReportStore: @unchecked Sendable {
             // A freeze whose length didn't read says only its day.
             let what = r.kind == .crash ? "Crash on \(Self.day(r.date))"
                 : r.freezeSeconds.map { "Froze for \(Self.number($0)) seconds on \(Self.day(r.date))" } ?? "Froze on \(Self.day(r.date))"
-            lines.append("\(what): Hermes \(r.appVersion) (\(r.appBuild)), \(r.osVersion), \(r.device)")
+            lines.append("\(what): Artha \(r.appVersion) (\(r.appBuild)), \(r.osVersion), \(r.device)")
             var codes: [String] = []
             if let t = r.exceptionType { codes.append("exception type \(t)") }
             if let c = r.exceptionCode { codes.append("code \(c)") }

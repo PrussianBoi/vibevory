@@ -16,7 +16,7 @@ struct PluginsView: View {
     var body: some View {
         SettingsList {
             SettingsHeaderSection(title: "Plugins", symbol: "puzzlepiece.extension.fill", color: .orange,
-                                  description: "Everything the gateway loads beside the agent itself: Hermes's companion, the plugins you installed, and the ones Hermes ships with.")
+                                  description: "Everything the gateway loads beside the agent itself: Artha's companion, the plugins you installed, and the ones Hermes ships with.")
             Section {
                 if let c = companion {
                     PluginRow(plugin: c, highlight: true)
@@ -26,10 +26,10 @@ struct PluginsView: View {
                             .font(.footnote).foregroundStyle(.secondary)
                     }
                 } else if hub != nil {
-                    Label("Hermes's companion is not in this gateway's plugin list. Settings › Companion installs it, or shows it running if the gateway loads it another way.", systemImage: "bell.slash")
+                    Label("Artha's companion is not in this gateway's plugin list. Settings › Companion installs it, or shows it running if the gateway loads it another way.", systemImage: "bell.slash")
                         .font(.footnote).foregroundStyle(.secondary)
                 }
-            } header: { Text("Hermes") }
+            } header: { Text("Artha") }
             Section {
                 if loading, hub == nil { ProgressView() }
                 if let error { Text(error).font(.footnote).foregroundStyle(.red) }

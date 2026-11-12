@@ -14,7 +14,7 @@ import VoryCore
 /// A question to the bot, answered in a few spoken sentences. The same "Siri" chat takes every
 /// question, so a follow-up ("and yesterday?") makes sense to the bot.
 struct AskVoryIntent: AppIntent {
-    static let title: LocalizedStringResource = "Ask Hermes"
+    static let title: LocalizedStringResource = "Ask Artha"
     static let description = IntentDescription("Asks your bot a question and reads out the short answer.")
     static let openAppWhenRun = false
 
@@ -38,7 +38,7 @@ struct AskVoryIntent: AppIntent {
 /// Opens one of the recent chats by its title (Siri, Shortcuts, Spotlight).
 struct OpenChatIntent: AppIntent {
     static let title: LocalizedStringResource = "Open Chat"
-    static let description = IntentDescription("Opens one of your recent chats in Hermes.")
+    static let description = IntentDescription("Opens one of your recent chats in Artha.")
     static let openAppWhenRun = true
 
     @Parameter(title: "Chat")
@@ -59,7 +59,7 @@ struct OpenChatIntent: AppIntent {
 /// A new chat, with the named bot or the default one.
 struct NewChatIntent: AppIntent {
     static let title: LocalizedStringResource = "New Chat"
-    static let description = IntentDescription("Starts a new chat in Hermes, with the bot you name or the default one.")
+    static let description = IntentDescription("Starts a new chat in Artha, with the bot you name or the default one.")
     static let openAppWhenRun = true
 
     @Parameter(title: "Bot")
@@ -100,7 +100,7 @@ struct BotStatusIntent: AppIntent {
 /// keeps the standing rule and never answers approvals.
 struct AnswerApprovalIntent: AppIntent {
     static let title: LocalizedStringResource = "Answer Approval"
-    static let description = IntentDescription("Allows or denies the approval waiting in Hermes, after reading it to you.")
+    static let description = IntentDescription("Allows or denies the approval waiting in Artha, after reading it to you.")
     static let openAppWhenRun = false
     static let authenticationPolicy: IntentAuthenticationPolicy = .requiresAuthentication
 
@@ -128,7 +128,7 @@ struct AnswerApprovalIntent: AppIntent {
 /// Button's natural job).
 struct StartVoiceModeIntent: AppIntent {
     static let title: LocalizedStringResource = "Start Voice Mode"
-    static let description = IntentDescription("Opens Hermes and starts a voice conversation with your bot.")
+    static let description = IntentDescription("Opens Artha and starts a voice conversation with your bot.")
     static let openAppWhenRun = true
 
     /// Which bot: the default one when none is named (#310).
@@ -154,7 +154,7 @@ struct VoryShortcuts: AppShortcutsProvider {
         AppShortcut(intent: AskVoryIntent(),
                     phrases: ["Ask \(.applicationName)", "Ask \(.applicationName) a question", "Ask \(.applicationName) something",
                               "Ask \(\.$bot) in \(.applicationName)", "Ask \(\.$bot) something in \(.applicationName)"],
-                    shortTitle: "Ask Hermes", systemImageName: "bubble.left.and.text.bubble.right")
+                    shortTitle: "Ask Artha", systemImageName: "bubble.left.and.text.bubble.right")
         AppShortcut(intent: StartVoiceModeIntent(),
                     phrases: ["Start voice mode in \(.applicationName)", "Talk to \(.applicationName)", "\(.applicationName) voice mode",
                               "Talk to \(\.$bot) in \(.applicationName)"],
@@ -190,9 +190,9 @@ enum SiriAsk {
     enum Connected { case ready(GatewayRuntime), failed(String) }
     static func connectedRuntime() async -> Connected {
         let model = AppModel.shared
-        guard model.hasConnections else { return .failed("Set up a gateway in Hermes first.") }
+        guard model.hasConnections else { return .failed("Set up a gateway in Artha first.") }
         if model.runtime == nil { await model.activateSavedConnection() }
-        guard let rt = model.runtime else { return .failed("Hermes could not reach your gateway.") }
+        guard let rt = model.runtime else { return .failed("Artha could not reach your gateway.") }
         let deadline = Date().addingTimeInterval(10)
         while !rt.socketState.isOpen, Date() < deadline { try? await Task.sleep(for: .milliseconds(250)) }
         guard rt.socketState.isOpen else { return .failed("Your gateway isn't answering right now.") }
@@ -224,9 +224,9 @@ enum SiriAsk {
     }
 
     static func noApprovalLine() async -> String {
-        guard case .ready(let rt) = await connectedRuntime() else { return "Hermes could not reach your gateway." }
+        guard case .ready(let rt) = await connectedRuntime() else { return "Artha could not reach your gateway." }
         let n = rt.chats.flatMap { $0.cards.filter { $0.approval != nil } }.count
-        return n > 1 ? "\(n) approvals are waiting; open Hermes to pick one." : "No approval is waiting."
+        return n > 1 ? "\(n) approvals are waiting; open Artha to pick one." : "No approval is waiting."
     }
 
     static func ask(_ question: String, bot: BotEntity? = nil) async -> String {
@@ -241,7 +241,7 @@ enum SiriAsk {
         case .failed(let why): return why
         case .ready(let r): rt = r
         }
-        guard let chat = await siriChat(on: rt, bot: bot) else { return "Hermes could not open a chat on your gateway." }
+        guard let chat = await siriChat(on: rt, bot: bot) else { return "Artha could not open a chat on your gateway." }
         // A spoken answer within Siri's time: quick answers for this question, put back after.
         await chat.beginQuickAnswers()
         defer { Task { await chat.endQuickAnswers() } }

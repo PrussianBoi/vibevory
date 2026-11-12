@@ -323,7 +323,7 @@ struct KanbanView: View {
         case .comment(let t): if !text.isEmpty { await changed(store.comment(t, text), store) }
         case .archive(let t): await changed(store.move(t, to: .archived), store)
         case .delete(let t): await changed(store.delete(t), store)
-        case .stop(let t): await changed(store.stop(t, reason: "stopped from Hermes"), store)
+        case .stop(let t): await changed(store.stop(t, reason: "stopped from Artha"), store)
         }
     }
 
@@ -521,7 +521,7 @@ struct KanbanTaskSheet: View {
                 }
             }
             .confirmationDialog("Stop the worker?", isPresented: $confirmStop, titleVisibility: .visible) {
-                Button("Stop", role: .destructive) { Task { if let d = detail, let store { if !(await store.stop(d.task, reason: "stopped from Hermes")) { error = store.lastError }; await load() } } }
+                Button("Stop", role: .destructive) { Task { if let d = detail, let store { if !(await store.stop(d.task, reason: "stopped from Artha")) { error = store.lastError }; await load() } } }
                 Button("Cancel", role: .cancel) {}
             } message: { Text("The worker is terminated and the card goes back to ready.") }
             .task { await load() }

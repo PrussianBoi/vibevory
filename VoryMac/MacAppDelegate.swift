@@ -27,7 +27,7 @@ final class MacAppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationC
     static func showMainWindowIfNone() {
         let open = NSApp.windows.contains { $0.isVisible && $0.identifier?.rawValue.hasPrefix(MacWindow.main) == true }
         guard !open, let menu = NSApp.windowsMenu,
-              let item = menu.items.first(where: { $0.title == "Hermes" && $0.action != nil }) else { return }
+              let item = menu.items.first(where: { $0.title == "Artha" && $0.action != nil }) else { return }
         menu.performActionForItem(at: menu.index(of: item))
     }
 

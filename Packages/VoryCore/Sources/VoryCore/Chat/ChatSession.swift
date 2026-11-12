@@ -577,7 +577,7 @@ public final class ChatSession: @MainActor Identifiable, ChatIdentity {
     // MARK: Re-attach (#641)
 
     /// The banner's words, from a minute of trouble; the error's own text goes to the log only.
-    public nonisolated static let reattachFailedLine = "This chat isn't connected. Hermes keeps trying."
+    public nonisolated static let reattachFailedLine = "This chat isn't connected. Artha keeps trying."
     /// Said to VoiceOver when a chat whose banner had come is attached again.
     public nonisolated static let reattachBackLine = "This chat is connected again."
 

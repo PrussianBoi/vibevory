@@ -49,7 +49,7 @@ struct AcknowledgementsView: View {
     var body: some View {
         SettingsList {
             SettingsHeaderSection(title: "Acknowledgements", symbol: "doc.text", color: .gray,
-                                  description: "Open-source code inside Hermes, and the licence each comes under.")
+                                  description: "Open-source code inside Artha, and the licence each comes under.")
             if list.isEmpty {
                 Section { Text("The licences couldn't be read.").foregroundStyle(.secondary) }
             }

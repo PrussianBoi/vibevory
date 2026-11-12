@@ -646,7 +646,7 @@ private struct MacLockView: View {
     var body: some View {
         VStack(spacing: 14) {
             Image(systemName: "lock.fill").font(.system(size: 34, weight: .medium)).foregroundStyle(.secondary).accessibilityHidden(true)
-            Text("Hermes is locked").font(.headline)
+            Text("Artha is locked").font(.headline)
             if let e = model.lock.lastError { Text(e).font(.footnote).foregroundStyle(.secondary) }
             Button("Unlock with \(model.lock.biometryName)") { Task { await model.lock.unlock() } }
                 .buttonStyle(.glassProminent)

@@ -48,7 +48,7 @@ final class AppLock {
             return
         }
         do {
-            let ok = try await ctx.evaluatePolicy(.deviceOwnerAuthentication, localizedReason: "Unlock Hermes")
+            let ok = try await ctx.evaluatePolicy(.deviceOwnerAuthentication, localizedReason: "Unlock Artha")
             if ok { isLocked = false; lastError = nil }
         } catch {
             lastError = error.localizedDescription
