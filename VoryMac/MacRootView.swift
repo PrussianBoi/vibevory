@@ -668,8 +668,12 @@ private struct ChatTabsArea: View {
     @State private var tabs = ChatTabs.shared
 
     var body: some View {
-        ChatDetailStack(path: $path) { StartPage(path: $path) }
-            .safeAreaInset(edge: .top, spacing: 0) { TabStrip() }
+        // The tabs above the conversation, not over it: an open chat's transcript runs to the top
+        // of its own frame, and as an inset the tabs went under it.
+        VStack(spacing: 0) {
+            TabStrip()
+            ChatDetailStack(path: $path) { StartPage(path: $path) }
+        }
             .onChange(of: tabs.selected) { _, _ in
                 path = tabs.current?.route?.path ?? NavigationPath()
             }

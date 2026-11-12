@@ -16,6 +16,19 @@ final class MacAppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationC
         Task { @MainActor in ContinuityMenuFilter.start() }
         // Sleep and wake are the Mac's away and back (the phone's are its scene phase).
         Task { @MainActor in MacSleepAway.shared.start() }
+        // The main window, if launch didn't bring it (seen on a fresh Mac: only the menu bar
+        // item came up). Window › Vory opens it, so ask for it the same way.
+        Task { @MainActor in
+            try? await Task.sleep(for: .seconds(1.5))
+            Self.showMainWindowIfNone()
+        }
+    }
+
+    static func showMainWindowIfNone() {
+        let open = NSApp.windows.contains { $0.isVisible && $0.identifier?.rawValue.hasPrefix(MacWindow.main) == true }
+        guard !open, let menu = NSApp.windowsMenu,
+              let item = menu.items.first(where: { $0.title == "Vory" && $0.action != nil }) else { return }
+        menu.performActionForItem(at: menu.index(of: item))
     }
 
     func application(_ application: NSApplication, didRegisterForRemoteNotificationsWithDeviceToken deviceToken: Data) {
