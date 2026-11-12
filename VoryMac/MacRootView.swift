@@ -412,7 +412,7 @@ private struct Sidebar: View {
     private func badge(_ tab: AppModel.AppTab) -> Int {
         switch tab {
         case .chats, .approvals: return model.runtime?.needsAttention.count ?? 0
-        case .settings: return model.companionUpdateAvailable ? 1 : 0
+        case .settings: return ArthaUpdater.shared.available != nil ? 1 : 0
         default: return 0
         }
     }

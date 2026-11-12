@@ -87,6 +87,9 @@ struct SettingsView: View {
                         .simultaneousGesture(TapGesture().onEnded { setupCardDone = true })
                     }
                 }
+                #if os(macOS)
+                if search.isEmpty { ArthaUpdateSection() }
+                #endif
                 if search.isEmpty {
                     Section {
                         NavigationLink { GatewaysView().pushedPage() } label: {
@@ -1317,3 +1320,57 @@ struct CountBadge: View {
             .accessibilityLabel("\(count) waiting")
     }
 }
+
+#if os(macOS)
+/// Settings' first card when a newer Artha is out: its number, the change in a line, and Update.
+/// While up to date, a quiet line with the build and a way to check now.
+struct ArthaUpdateSection: View {
+    @State private var updater = ArthaUpdater.shared
+    var body: some View {
+        if let r = updater.available {
+            Section {
+                HStack(spacing: 12) {
+                    Image(systemName: "arrow.down.circle").font(.system(size: 15)).foregroundStyle(.white.opacity(0.9))
+                        .frame(width: 34, height: 34)
+                        .background(.white.opacity(0.1), in: .rect(cornerRadius: 10, style: .continuous))
+                        .overlay(RoundedRectangle(cornerRadius: 10, style: .continuous).strokeBorder(.white.opacity(0.16), lineWidth: 0.5))
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Artha build \(r.build) is ready").font(.headline)
+                        Text(status(r)).font(.caption).foregroundStyle(failed ? Color(red: 1, green: 0.55, blue: 0.55) : .secondary).lineLimit(2)
+                    }
+                    Spacer()
+                    switch updater.state {
+                    case .downloading, .installing: ProgressView().controlSize(.small)
+                    default: MacCapsuleButton(title: "Update", prominent: true) { updater.install() }
+                            .accessibilityIdentifier("settings.update")
+                    }
+                }
+                .padding(.vertical, 4)
+            }
+        } else {
+            Section {
+                HStack {
+                    Text(updater.currentBuild > 0 ? "Artha build \(updater.currentBuild)" : "Artha (local build)")
+                    Spacer()
+                    if updater.state == .checking { ProgressView().controlSize(.small) }
+                    else {
+                        Text("Up to date").foregroundStyle(.secondary)
+                        Button("Check now") { Task { await updater.check() } }.buttonStyle(.borderless)
+                    }
+                }
+                .font(.callout)
+            }
+        }
+    }
+
+    private var failed: Bool { if case .failed = updater.state { return true }; return false }
+    private func status(_ r: ArthaUpdater.Release) -> String {
+        switch updater.state {
+        case .downloading: return "Downloading…"
+        case .installing: return "Installing. Artha restarts in a moment."
+        case .failed(let why): return why
+        default: return r.notes.isEmpty ? "You have build \(updater.currentBuild)." : r.notes
+        }
+    }
+}
+#endif

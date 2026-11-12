@@ -6,6 +6,9 @@ on:
   pull_request:
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 concurrency:
   group: mac-${{ github.ref }}
   cancel-in-progress: false
@@ -40,6 +43,8 @@ jobs:
           /usr/libexec/PlistBuddy -c "Set :CFBundleIdentifier dev.raturi.vibevory" "$APP/Contents/Info.plist"
           # The app is "Artha" in Finder and the Dock.
           mv "$APP" build/Build/Products/Release/Artha.app && APP=build/Build/Products/Release/Artha.app
+          # The build number Artha's updater compares against the latest release.
+          /usr/libexec/PlistBuddy -c "Add :ArthaBuild integer ${{ github.run_number }}" "$APP/Contents/Info.plist"
           codesign --force --deep --sign - "$APP"
           codesign --verify --deep "$APP"
           mkdir -p out && ditto -c -k --keepParent "$APP" out/Artha-mac.zip
@@ -49,6 +54,16 @@ jobs:
           name: Artha-mac
           path: out/Artha-mac.zip
           retention-days: 14
+
+      # Every build of master is a release: Artha checks the latest one and updates itself from it.
+      - name: Publish release
+        if: github.event_name != 'pull_request' && github.ref == 'refs/heads/master'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          N=${{ github.run_number }}
+          git log -1 --format=%B > notes.txt
+          gh release create "build-$N" out/Artha-mac.zip --title "Artha build $N" --notes-file notes.txt --target "$GITHUB_SHA" --latest
 
       - uses: actions/upload-artifact@v4
         if: failure()

@@ -97,6 +97,7 @@ struct VoryMacApp: App {
                 .onOpenURL { url in model.open(url) }
                 .continuesHandoff(model)
                 .task {
+                    ArthaUpdater.shared.start()
                     await model.activateSavedConnection()
                     await model.refreshCompanionUpdateFlag()
                     ActivationRecheck.companion.noteRun()
