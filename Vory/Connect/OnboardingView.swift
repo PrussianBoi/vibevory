@@ -75,10 +75,9 @@ struct OnboardingView: View {
         NavigationStack {
             arthaWelcome
                 .navigationDestination(isPresented: $showForm) {
-                    GatewayFormView().containerBackground(.clear, for: .navigation)
+                    GatewayFormView()
                 }
         }
-        .containerBackground(.clear, for: .navigation)
         .onAppear {
             #if DEBUG
             if ProcessInfo.processInfo.arguments.contains("-vibe-open-connect") { showForm = true }
