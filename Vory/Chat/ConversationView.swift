@@ -265,8 +265,7 @@ struct ConversationView: View {
                             Text(botLabel(chat)).font(.system(size: 12.5, weight: .medium)).lineLimit(1)
                         }
                         .padding(.leading, 6).padding(.trailing, 12).frame(height: 28)
-                        .glassEffect(.clear.tint(.black.opacity(0.12)), in: .capsule)
-                        .overlay(Capsule().strokeBorder(.white.opacity(0.14), lineWidth: 0.5))
+                        .vibeGlass(Capsule())
                         .contentShape(.capsule)
                     }
                     .buttonStyle(.plain)

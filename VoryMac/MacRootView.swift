@@ -197,8 +197,7 @@ private struct MainSplitView: View {
                     .frame(width: SidebarChrome.width - 16)
                     .frame(maxHeight: .infinity)
                     // VibeVory: see-through Liquid Glass over the aurora, inset from the window's edges.
-                    .glassEffect(.clear.tint(.black.opacity(0.08)), in: .rect(cornerRadius: 18))
-                    .overlay(RoundedRectangle(cornerRadius: 18, style: .continuous).strokeBorder(.white.opacity(0.14), lineWidth: 0.5).allowsHitTesting(false))
+                    .vibeGlass(RoundedRectangle(cornerRadius: 18, style: .continuous))
                     .padding(8)
                     .ignoresSafeArea(.container, edges: .top)
                     .transition(.move(edge: .leading).combined(with: .opacity))
@@ -215,8 +214,7 @@ private struct MainSplitView: View {
                         HermesSidebar(tabs: tabs, chatPath: $chatPath, floating: true)
                             .frame(width: SidebarChrome.width)
                             .frame(maxHeight: .infinity)
-                            .glassEffect(.clear.tint(.black.opacity(0.12)), in: .rect(cornerRadius: 18))
-                            .overlay(RoundedRectangle(cornerRadius: 18, style: .continuous).strokeBorder(.white.opacity(0.16), lineWidth: 0.5).allowsHitTesting(false))
+                            .vibeGlass(RoundedRectangle(cornerRadius: 18, style: .continuous), frost: 0.6)
                             .shadow(color: .black.opacity(0.4), radius: 30, y: 18)
                             .padding(8)
                             .onHover { inside in if inside { chrome.reveal() } else { chrome.leave() } }
@@ -864,8 +862,7 @@ private struct StartPage: View {
         }
         .padding(.leading, 15).padding(.trailing, 10).padding(.top, 12).padding(.bottom, 9)
         .frame(maxWidth: 620)
-        .glassEffect(.clear.tint(.black.opacity(0.12)), in: .rect(cornerRadius: 20))
-        .overlay(RoundedRectangle(cornerRadius: 20, style: .continuous).strokeBorder(.white.opacity(0.14), lineWidth: 0.5).allowsHitTesting(false))
+        .vibeGlass(RoundedRectangle(cornerRadius: 20, style: .continuous))
         .shadow(color: .black.opacity(0.35), radius: 25, y: 18)
     }
 

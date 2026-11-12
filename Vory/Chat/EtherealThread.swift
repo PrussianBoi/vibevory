@@ -78,6 +78,14 @@ enum Ethereal {
 }
 
 extension View {
+    /// Glass recipe H, Dev's pick from the glass test (2026-11-12): clear Liquid Glass with a light
+    /// frost underneath and a hairline rim. `frost` thickens it where text must stay readable.
+    func vibeGlass<S: InsettableShape>(_ shape: S, tint: Color = .white.opacity(0.03), frost: Double = 0.5, rim: Bool = true) -> some View {
+        glassEffect(.clear.tint(tint), in: shape)
+            .background(.ultraThinMaterial.opacity(frost), in: shape)
+            .overlay(shape.strokeBorder(.white.opacity(rim ? 0.16 : 0), lineWidth: 0.5).allowsHitTesting(false))
+    }
+
     /// A reply's words on the Mac: 12.5 pt, airy, near-white with a faint glow.
     func etherealReply() -> some View {
         font(Ethereal.body)
@@ -88,8 +96,7 @@ extension View {
 
     /// The soft glass pill of the person's own message.
     func etherealPill(cornerRadius: CGFloat = 16) -> some View {
-        glassEffect(.clear.tint(.white.opacity(0.04)), in: .rect(cornerRadius: cornerRadius))
-            .overlay(RoundedRectangle(cornerRadius: cornerRadius, style: .continuous).strokeBorder(Ethereal.pillStroke, lineWidth: 0.5).allowsHitTesting(false))
+        vibeGlass(RoundedRectangle(cornerRadius: cornerRadius, style: .continuous))
     }
 
     /// A small 22 pt control pill in the composer (model, effort, +).
