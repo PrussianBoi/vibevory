@@ -53,7 +53,10 @@ jobs:
             PID=$!
             sleep "$3"
             osascript -e 'tell application id "com.vorantx.vory.demo" to activate' || true
-            sleep 3
+            sleep 2
+            # No window yet: ask for it from the Window menu, as a person would.
+            osascript -e 'tell application "System Events" to tell (first process whose bundle identifier is "com.vorantx.vory.demo") to click (first menu item of menu "Window" of menu bar 1 whose name starts with "Vory")' >> app.log 2>&1 || true
+            sleep 4
             echo "== $1: windows" >> app.log
             python3 -c 'import Quartz;[print(w.get("kCGWindowOwnerName"),w.get("kCGWindowName"),dict(w.get("kCGWindowBounds")),w.get("kCGWindowLayer")) for w in Quartz.CGWindowListCopyWindowInfo(0,0)]' >> app.log 2>&1 || true
             screencapture -x "shots/$1.png"
@@ -62,6 +65,7 @@ jobs:
             kill $PID 2>/dev/null || true
             sleep 3
           }
+          open -a Calculator; sleep 5; screencapture -x shots/00-calculator.png; osascript -e 'quit app "Calculator"' || true
           shot 01-empty "" 20
           shot 02-chat "-vibe-open-chat 20260921_154212_a1b2c3" 25
           shot 03-chat-tools "-vibe-open-chat 20260921_093355_d4e5f6" 25
