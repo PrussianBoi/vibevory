@@ -169,6 +169,14 @@ final class PluginHost {
         }
         .sorted { ($0.order, $0.title) < ($1.order, $1.title) }
         if let selected, !pages.contains(where: { $0.id == selected }) { self.selected = nil }
+        #if DEBUG
+        // `-vibe-open-plugin <path>`: opens that plugin page once it is there (the CI screenshots).
+        let args = ProcessInfo.processInfo.arguments
+        if let i = args.firstIndex(of: "-vibe-open-plugin"), args.indices.contains(i + 1),
+           let page = pages.first(where: { $0.path == args[i + 1] }), selected == nil {
+            open(page)
+        }
+        #endif
     }
 
     // MARK: Messages from the page
