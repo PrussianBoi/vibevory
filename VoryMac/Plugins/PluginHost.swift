@@ -77,6 +77,13 @@ final class PluginHost {
         guard started, mountedPath != path, let webView else { return }
         mountedPath = path
         webView.evaluateJavaScript("window.VibePluginHost.mount({kind:'route',path:\(Self.js(path))})")
+        #if DEBUG
+        Task {
+            try? await Task.sleep(for: .seconds(3))
+            let text = try? await webView.evaluateJavaScript("document.body.innerText.slice(0,300)+' | '+location.href+' | '+document.body.scrollWidth+'x'+document.body.scrollHeight")
+            print("[plugins] mounted \(path): frame \(webView.frame) window \(webView.window != nil) text: \(text ?? "nil")")
+        }
+        #endif
     }
 
     // MARK: Setup
@@ -183,6 +190,9 @@ final class PluginHost {
 
     fileprivate func received(_ body: Any) {
         guard let m = body as? [String: Any], let type = m["type"] as? String else { return }
+        #if DEBUG
+        if type != "api" { print("[plugins] \(type) \(String(describing: m).prefix(300))") }
+        #endif
         let id = m["requestId"] as? String
         switch type {
         case "loaded":
