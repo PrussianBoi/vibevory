@@ -10,10 +10,16 @@ import VoryCore
 /// the second would change nothing). No AppKit or UIKit here: it compiles in every target.
 enum ChatNavigation {
     /// Shows `route` in the detail column in place of what it shows now.
+    /// Told of every selection (the Mac's chat tabs listen): the route, as `Any`.
+    nonisolated(unsafe) static var onSelect: ((Any) -> Void)?
+
     static func select(_ route: some Hashable, in path: inout NavigationPath) {
         if let chat = route as? ChatRoute {
-            path = NavigationPath([tokened(chat)])
+            let t = tokened(chat)
+            onSelect?(t as Any)
+            path = NavigationPath([t])
         } else {
+            onSelect?(route as Any)
             path = NavigationPath([route])
         }
     }

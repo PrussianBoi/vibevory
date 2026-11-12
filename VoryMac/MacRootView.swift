@@ -154,41 +154,22 @@ private struct MainSplitView: View {
 
     var body: some View {
         let chats = model.selectedTab == .chats
-        ZStack {
-            // The Chats page (rail, list, chat) stays mounted while another page shows, as the
-            // iPhone keeps every tab page alive (RootView): tearing it down cost ~250 ms of the
-            // switch away and building it again ~450 ms of the switch back (the aligned hitch
-            // tables of 2026-10-11/12, clean-click drive). Hidden, it follows `MacPage`.
-            NavigationSplitView(columnVisibility: $columns) {
-                // Its rail's ⌘ numbers only while it shows: the other page's rail has them then
-                // (declared twice, ⌘2 from Bots fired on both rails, and on Chats ⌘3 and ⌘4 then did
-                // nothing until the next click on the rail).
-                Sidebar(tabs: tabs, shortcuts: chats)
-            } content: {
-                ChatListView(detailPath: $chatPath)
-                    // A renamed bot's open chat is stale (#315): back to the placeholder;
-                    // the list has the chat again under the new name.
+        // Hermes Desktop's layout, in SwiftUI: one sidebar (the pages, then the chats) and, beside
+        // it, the chat tabs or the page chosen. The pages stay mounted once visited, so a switch
+        // is an opacity change (see `MacPage`).
+        NavigationSplitView(columnVisibility: $columns) {
+            DesktopSidebar(tabs: tabs, chatPath: $chatPath)
+        } detail: {
+            ZStack {
+                ChatTabsArea(path: $chatPath)
+                    // A renamed bot's open chat is stale (#315): back to the placeholder.
                     .onReceive(NotificationCenter.default.publisher(for: .hermesBotRenamed)) { _ in chatPath = NavigationPath() }
-                    .navigationSplitViewColumnWidth(min: 320, ideal: 380, max: 560)
-            } detail: {
-                // The chat beside the list (`ChatNavigation`): shared with the iPad and the
-                // open Duo in 1.5; no back chevron, the list is the way between chats.
-                ChatDetailStack(path: $chatPath) { NoChatView() }
-            }
-            .modifier(MacPage(shown: chats, windowLive: windowLive))
-            // Every other page the same way (2026-10-12, follow-up 1): mounted on its first visit
-            // and kept, so a switch is an opacity change, not a split view, a rail and a page
-            // built afresh (69 % of the 300 ms leaving Chats). One split per page, keyed by its
-            // tab; a page whose tab leaves the rail is dropped.
-            ForEach(keptPages, id: \.self) { tab in
-                NavigationSplitView(columnVisibility: $columns) {
-                    Sidebar(tabs: tabs, shortcuts: model.selectedTab == tab)
-                } detail: {
+                    .modifier(MacPage(shown: chats, windowLive: windowLive))
+                ForEach(keptPages, id: \.self) { tab in
                     page(tab)
+                        .id(resets[tab, default: 0])
+                        .modifier(MacPage(shown: model.selectedTab == tab, windowLive: windowLive))
                 }
-                // The whole split: what is pushed lives in the split's detail column, not in the page.
-                .id(resets[tab, default: 0])
-                .modifier(MacPage(shown: model.selectedTab == tab, windowLive: windowLive))
             }
         }
         // Room for the rail, the list and a reading column with a table in it: narrower than this
@@ -571,5 +552,105 @@ private struct MacLockView: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(.regularMaterial)
         .task { await model.lock.unlock() }
+    }
+}
+
+// MARK: - Hermes Desktop layout
+
+/// The sidebar, as Hermes Desktop has it: New chat and the pages at the top, then search and the
+/// chats (the chat list, unchanged underneath), and the gateway at the foot. One Liquid Glass column.
+private struct DesktopSidebar: View {
+    @Environment(AppModel.self) private var model
+    var tabs: [AppModel.AppTab]
+    @Binding var chatPath: NavigationPath
+
+    var body: some View {
+        ChatListView(detailPath: $chatPath)
+            .environment(\.macPageShown, true)
+            .safeAreaInset(edge: .top, spacing: 4) { PageNav(tabs: tabs) }
+            .safeAreaInset(edge: .bottom, spacing: 0) { GatewayFooter() }
+            .toolbar(removing: .sidebarToggle)
+            // A chat picked in the list brings the chats back in front of any page.
+            .onChange(of: chatPath) { _, _ in if model.selectedTab != .chats { model.selectedTab = .chats } }
+            .navigationSplitViewColumnWidth(min: 250, ideal: 290, max: 380)
+    }
+}
+
+/// New chat and the pages, as rows.
+private struct PageNav: View {
+    @Environment(AppModel.self) private var model
+    var tabs: [AppModel.AppTab]
+
+    var body: some View {
+        VStack(spacing: 1) {
+            NavRow(symbol: "square.and.pencil", title: "New chat", selected: false, shortcut: nil) {
+                // A fresh tab, and the same new chat ⌘N makes, opened in it.
+                ChatTabs.shared.newTab()
+                model.selectedTab = .chats
+                model.newChatRequest = UUID()
+            }
+            ForEach(Array(tabs.filter { $0 != .chats && $0 != .dashboard }.enumerated()), id: \.element) { i, tab in
+                NavRow(symbol: tab.symbol, title: tab.title, selected: model.selectedTab == tab,
+                       badge: tab == .approvals ? (model.runtime?.needsAttention.count ?? 0) : 0,
+                       shortcut: i < 9 ? Character("\(i + 1)") : nil) {
+                    if model.selectedTab == tab { model.tabReselected[tab, default: 0] += 1 } else { model.selectedTab = tab }
+                }
+            }
+        }
+        .padding(.horizontal, 10)
+        .padding(.top, 4)
+        .contextMenu { RailPages() }
+    }
+}
+
+private struct NavRow: View {
+    var symbol: String
+    var title: String
+    var selected: Bool
+    var badge: Int = 0
+    var shortcut: Character?
+    var action: () -> Void
+    @State private var hovering = false
+
+    var body: some View {
+        Button(action: action) {
+            HStack(spacing: 9) {
+                Image(systemName: symbol)
+                    .font(.system(size: 13, weight: .medium))
+                    .frame(width: 18)
+                    .foregroundStyle(selected ? Color.accentColor : .secondary)
+                Text(title).font(.system(size: 13, weight: selected ? .semibold : .regular))
+                Spacer(minLength: 4)
+                if badge > 0 { CountBadge(badge).scaleEffect(0.8) }
+                else if let shortcut, hovering {
+                    Text("⌘\(String(shortcut).uppercased())").font(.system(size: 11)).foregroundStyle(.tertiary)
+                }
+            }
+            .padding(.horizontal, 8)
+            .frame(height: 28)
+            .background {
+                RoundedRectangle(cornerRadius: 8, style: .continuous)
+                    .fill(selected ? Color.accentColor.opacity(0.16) : (hovering ? Color.primary.opacity(0.07) : .clear))
+            }
+            .contentShape(.rect)
+        }
+        .buttonStyle(.plain)
+        .onHover { hovering = $0 }
+        .keyboardShortcut(shortcut.map { KeyboardShortcut(KeyEquivalent($0), modifiers: .command) })
+        .accessibilityAddTraits(selected ? .isSelected : [])
+    }
+}
+
+/// The chats beside the sidebar: the tab strip on top and the open tab's chat below it.
+private struct ChatTabsArea: View {
+    @Binding var path: NavigationPath
+    @State private var tabs = ChatTabs.shared
+
+    var body: some View {
+        ChatDetailStack(path: $path) { NoChatView() }
+            .safeAreaInset(edge: .top, spacing: 0) { TabStrip() }
+            .onChange(of: tabs.selected) { _, _ in
+                path = tabs.current?.route?.path ?? NavigationPath()
+            }
     }
 }
