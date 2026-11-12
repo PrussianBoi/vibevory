@@ -71,13 +71,50 @@ struct OnboardingView: View {
         }
         .sheet(isPresented: $showRestore) { restoreSheet.sheetFrame().withAppModel() }
         #else
-        if welcomed || skipWelcome {
-            tour.transition(.opacity)
-        } else {
-            welcome.transition(.opacity)
+        // Artha: the welcome, then the connect card. No tour and no iCloud restore (this build has no iCloud).
+        NavigationStack {
+            arthaWelcome
+                .navigationDestination(isPresented: $showForm) {
+                    GatewayFormView().containerBackground(.clear, for: .navigation)
+                }
+        }
+        .containerBackground(.clear, for: .navigation)
+        .onAppear {
+            #if DEBUG
+            if ProcessInfo.processInfo.arguments.contains("-vibe-open-connect") { showForm = true }
+            #endif
+            if skipWelcome { showForm = true }
         }
         #endif
     }
+
+    #if os(macOS)
+    /// The first screen on the Mac: the dot sphere, the name, and the two ways in, on the sky.
+    private var arthaWelcome: some View {
+        VStack(spacing: 0) {
+            Spacer(minLength: 24)
+            DotSphereAvatar(profile: "home", size: 150, active: true)
+            Text("Artha").font(.system(size: 52, weight: .light)).tracking(1).padding(.top, 18)
+            Text("Your Hermes agent, on your Mac.").font(.system(size: 15)).foregroundStyle(.white.opacity(0.75)).padding(.top, 4)
+            VStack(spacing: 12) {
+                MacCapsuleButton(title: "Connect your gateway", prominent: true, wide: 300) { showForm = true }
+                    .keyboardShortcut(.defaultAction)
+                    .accessibilityIdentifier("onboarding.getStarted")
+                if model.demoAvailable {
+                    MacCapsuleButton(title: "Try a demo", symbol: "sparkles", prominent: false, wide: 300) { Task { await model.startDemo() } }
+                        .accessibilityHint("Opens Artha with demo bots, no gateway needed.")
+                        .accessibilityIdentifier("onboarding.tryDemo")
+                }
+            }
+            .padding(.top, 34)
+            Text("No account, no cloud. It talks straight to your own gateway.")
+                .font(.system(size: 12)).foregroundStyle(.white.opacity(0.55)).padding(.top, 18)
+            Spacer(minLength: 24)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .toolbar(removing: .title)
+    }
+    #endif
 
     /// Restore from iCloud: a gateway that came back connects (the root view moves on by itself); settings without a
     /// gateway go on to the form. Each `.sheet` gives it its frame and the model, where the presentations' scan

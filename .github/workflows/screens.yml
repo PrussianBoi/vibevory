@@ -98,6 +98,8 @@ jobs:
           shot 06-sidebar-reveal "-vibe-sidebar reveal -vibe-open-chat 20260921_093355_d4e5f6" 25
           shot 07-palette "-vibe-open-palette" 25
           shot 09-settings "-vibe-open-settings" 25
+          shot 10-welcome "-vory-show-welcome" 20
+          shot 11-connect "-vory-show-welcome -vibe-open-connect" 20
           shot 08-glass-lab "-vibe-glass-lab" 20
           ls -la shots
           mkdir -p crash; cp ~/Library/Logs/DiagnosticReports/*.ips crash/ 2>/dev/null || true

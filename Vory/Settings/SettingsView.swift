@@ -168,10 +168,19 @@ struct SettingsView: View {
 /// gateway is where the bots live.
 struct GatewayTile: View {
     var body: some View {
+        #if os(macOS)
+        // Artha: a plain globe on a glass tile, not Vory's blue cloud.
+        Image(systemName: "globe").font(.system(size: 15, weight: .regular)).foregroundStyle(.white.opacity(0.9))
+            .frame(width: 34, height: 34)
+            .background(.white.opacity(0.1), in: .rect(cornerRadius: 10, style: .continuous))
+            .overlay(RoundedRectangle(cornerRadius: 10, style: .continuous).strokeBorder(.white.opacity(0.16), lineWidth: 0.5))
+            .accessibilityHidden(true)
+        #else
         RoundedRectangle(cornerRadius: 7, style: .continuous).fill(Color.blue)
             .frame(width: 28, height: 28)
             .overlay { VoryOutlineIcon().foregroundStyle(.white).frame(width: 20, height: 17) }
             .accessibilityHidden(true)
+        #endif
     }
 }
 
@@ -182,8 +191,11 @@ struct SettingsLabel: View {
         #if os(macOS)
         // A Mac list sets no gap between a label's icon and its text; this is System Settings' row.
         HStack(spacing: 10) {
-            Image(systemName: symbol).font(.system(size: 12, weight: .medium)).foregroundStyle(.white)
-                .frame(width: 22, height: 22).background(color, in: .rect(cornerRadius: 5.5))
+            // Artha: a white line glyph on a faint glass tile; the row's colour is not used on the Mac.
+            Image(systemName: symbol).font(.system(size: 11.5, weight: .regular)).symbolVariant(.none).foregroundStyle(.white.opacity(0.9))
+                .frame(width: 24, height: 24)
+                .background(.white.opacity(0.1), in: .rect(cornerRadius: 7, style: .continuous))
+                .overlay(RoundedRectangle(cornerRadius: 7, style: .continuous).strokeBorder(.white.opacity(0.16), lineWidth: 0.5))
                 .accessibilityHidden(true)
             Text(title)
         }

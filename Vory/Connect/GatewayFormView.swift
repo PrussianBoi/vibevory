@@ -103,6 +103,8 @@ struct GatewayFormView: View {
     /// Whether this device can guard a remembered sign-in (it has a passcode), and with what.
     @State private var canRemember = true
     @State private var guardName = "Passcode"
+    /// The Mac card's folded fields (name, backup, prefix).
+    @State private var moreOpen = false
 
     /// A bare address on a home network or tailnet means plain http (no certificate there);
     /// anywhere else, https. Typing the scheme always wins.
@@ -139,6 +141,11 @@ struct GatewayFormView: View {
     }
 
     var body: some View {
+        Group {
+        #if os(macOS)
+        // Artha: one glass card on the sky, the rarely needed fields folded away (setup.png).
+        macCard
+        #else
         Form {
             Section {
                 Picker("Connection", selection: $kind) {
@@ -183,6 +190,8 @@ struct GatewayFormView: View {
         .pageToolbar {
             ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } }
             ToolbarItem(placement: .confirmationAction) { Button("Save") { save() }.disabled(saveBlocker != nil).accessibilityIdentifier("gateway.save") }
+        }
+        #endif
         }
         .onChange(of: urlText) { _, _ in invalidate() }
         .onChange(of: kind) { _, _ in invalidate() }
@@ -622,3 +631,225 @@ struct GatewayFormView: View {
         model.rememberedSignIn.didSignIn(id)
     }
 }
+
+#if os(macOS)
+extension GatewayFormView {
+    /// The connect card: kind, address, sign-in, the checks as they run, Back and Connect.
+    var macCard: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 14) {
+                VStack(alignment: .leading, spacing: 3) {
+                    Text(existing == nil ? "Connect your gateway" : "Edit gateway").font(.system(size: 17, weight: .semibold))
+                    Text("The address of your Hermes dashboard (hermes serve).").font(.system(size: 12)).foregroundStyle(.white.opacity(0.6))
+                }
+                Picker("", selection: $kind) {
+                    ForEach(ConnectionKind.allCases) { Text($0 == .local ? "This network" : $0 == .cloudflare ? "Cloudflare" : $0.title).tag($0) }
+                }
+                .pickerStyle(.segmented).labelsHidden()
+
+                MacField(label: "Gateway URL") {
+                    TextField("", text: $urlText, prompt: Text(kind.placeholder))
+                        .accessibilityIdentifier("gateway.url")
+                        .focused($field, equals: .url).onSubmit { field = secretField }
+                }
+                if let urlError { MacNote(text: urlError, tone: .red) }
+                else if let u = normalizedURL, let fits = ConnectionKind.suggested(for: u, chosen: kind) {
+                    Button("This looks like a \(fits.title) address. Use that") { kind = fits }
+                        .buttonStyle(.plain).font(.system(size: 11.5)).foregroundStyle(.orange)
+                }
+
+                VStack(alignment: .leading, spacing: 5) {
+                    Text("Sign in with").font(.system(size: 11)).foregroundStyle(.white.opacity(0.6)).padding(.leading, 2)
+                    Picker("", selection: $authMode) {
+                        ForEach(AuthMode.allCases) { Text($0 == .password ? "Password" : $0 == .oauth ? "Browser" : $0.title).tag($0) }
+                    }
+                    .pickerStyle(.segmented).labelsHidden()
+                    .accessibilityIdentifier("gateway.authMethod")
+                }
+                switch authMode {
+                case .sessionToken:
+                    MacField(label: "Session token") {
+                        SecureField("", text: $sessionToken, prompt: Text("HERMES_DASHBOARD_SESSION_TOKEN"))
+                            .textContentType(.oneTimeCode)
+                            .accessibilityIdentifier("gateway.sessionToken")
+                            .focused($field, equals: .token)
+                    }
+                case .password:
+                    if !providers.isEmpty || !providerName.isEmpty { providerPicker.font(.system(size: 12.5)) }
+                    MacField(label: "Username") {
+                        TextField("", text: $username).textContentType(.username)
+                            .accessibilityIdentifier("gateway.username")
+                            .focused($field, equals: .username).onSubmit { field = .password }
+                    }
+                    MacField(label: "Password") {
+                        SecureField("", text: $password).textContentType(.password)
+                            .accessibilityIdentifier("gateway.password")
+                            .focused($field, equals: .password)
+                    }
+                    Toggle("Remember sign-in on this Mac", isOn: $rememberSignIn)
+                        .font(.system(size: 12)).disabled(!canRemember && !rememberSignIn)
+                        .accessibilityIdentifier("gateway.rememberSignIn")
+                case .oauth:
+                    if !providers.isEmpty { providerPicker.font(.system(size: 12.5)) }
+                    Button { Task { await signInWithBrowser() } } label: {
+                        HStack(spacing: 6) {
+                            Image(systemName: bearerSecrets == nil ? "safari" : "checkmark.circle.fill")
+                            Text(bearerSecrets == nil ? "Sign in with browser" : "Signed in")
+                            if signingIn { ProgressView().controlSize(.small) }
+                        }
+                        .font(.system(size: 12.5, weight: .medium))
+                        .padding(.horizontal, 14).frame(height: 30)
+                        .vibeGlass(Capsule(), tint: .white.opacity(0.06))
+                    }
+                    .buttonStyle(.plain)
+                    .disabled(normalizedURL == nil || signingIn)
+                }
+
+                if kind == .cloudflare || access.isPartiallyConfigured {
+                    cloudflareFields
+                }
+
+                DisclosureGroup(isExpanded: $moreOpen) {
+                    VStack(alignment: .leading, spacing: 10) {
+                        MacField(label: "Name") {
+                            TextField("", text: $name, prompt: Text("Home")).accessibilityIdentifier("gateway.name")
+                                .focused($field, equals: .name)
+                        }
+                        MacField(label: "Backup address") {
+                            TextField("", text: $backupText, prompt: Text("Another way in: a Tailscale or tunnel address"))
+                        }
+                        if let backupProblem { MacNote(text: backupProblem, tone: .red) }
+                        MacField(label: "Path prefix") {
+                            TextField("", text: $pathPrefix, prompt: Text("/hermes")).focused($field, equals: .prefix)
+                        }
+                        if kind == .other { cloudflareFields }
+                    }
+                    .padding(.top, 8)
+                } label: {
+                    Text("Name, backup address, path prefix").font(.system(size: 12)).foregroundStyle(.white.opacity(0.6))
+                }
+
+                if !steps.isEmpty || testing || errorMessage != nil {
+                    VStack(alignment: .leading, spacing: 6) {
+                        ForEach(steps) { step in
+                            HStack(alignment: .top, spacing: 7) {
+                                stepIcon(step.status).font(.system(size: 11))
+                                VStack(alignment: .leading, spacing: 1) {
+                                    Text(step.title).font(.system(size: 12))
+                                    if case .failed(let why) = step.status {
+                                        Text(why).font(.system(size: 11)).foregroundStyle(Color(red: 1, green: 0.55, blue: 0.55)).textSelection(.enabled)
+                                    }
+                                }
+                            }
+                        }
+                        if let errorMessage { MacNote(text: errorMessage, tone: .red) }
+                    }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.horizontal, 12).padding(.vertical, 9)
+                    .background(.black.opacity(0.12), in: .rect(cornerRadius: 12, style: .continuous))
+                    .overlay(RoundedRectangle(cornerRadius: 12, style: .continuous).strokeBorder(.white.opacity(0.1), lineWidth: 0.5))
+                }
+
+                HStack(spacing: 10) {
+                    if canTest, !testing, !testPassed, !steps.isEmpty {
+                        Button("Test again") { Task { await runTest() } }.buttonStyle(.plain)
+                            .font(.system(size: 12)).foregroundStyle(.white.opacity(0.7))
+                            .accessibilityIdentifier("gateway.test")
+                    }
+                    Spacer()
+                    MacCapsuleButton(title: "Back", prominent: false) { dismiss() }
+                        .keyboardShortcut(.cancelAction)
+                    MacCapsuleButton(title: existing == nil ? "Connect" : "Save", prominent: true) {
+                        if name.trimmingCharacters(in: .whitespaces).isEmpty { name = normalizedURL?.host ?? "Home" }
+                        save()
+                    }
+                    .disabled(!(testPassed || backupPassed) || backupProblem != nil)
+                    .keyboardShortcut(.defaultAction)
+                    .accessibilityIdentifier("gateway.save")
+                }
+            }
+            .textFieldStyle(.plain)
+            .padding(.horizontal, 24).padding(.vertical, 22)
+            .frame(width: 470)
+            .vibeGlass(RoundedRectangle(cornerRadius: 20, style: .continuous), tint: .white.opacity(0.05))
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 40)
+            .frame(minHeight: 600)
+        }
+        .scrollContentBackground(.hidden)
+        .scrollIndicators(.never)
+        .navigationBarBackButtonHidden(true)
+        .toolbar(removing: .title)
+        // The test runs on its own a moment after the address or token stops changing (a password or the
+        // browser waits for the person: each try there is a sign-in).
+        .task(id: autoTestKey) {
+            guard authMode == .sessionToken, canTest, !testPassed else { return }
+            try? await Task.sleep(for: .milliseconds(900))
+            guard !Task.isCancelled, !testing else { return }
+            await runTest()
+        }
+    }
+
+    private var autoTestKey: String { [kind.rawValue, urlText, pathPrefix, authMode.rawValue, sessionToken, cfClientId, cfClientSecret].joined(separator: "|") }
+
+    @ViewBuilder private var cloudflareFields: some View {
+        MacField(label: "CF-Access-Client-Id") { TextField("", text: $cfClientId) }
+        MacField(label: "CF-Access-Client-Secret") { SecureField("", text: $cfClientSecret) }
+        if access.isPartiallyConfigured { MacNote(text: "Enter both the Client ID and the Client Secret, or leave both blank.", tone: .red) }
+    }
+}
+
+/// A labelled field in the glass card: the label small above, the field in a dark rounded box.
+private struct MacField<F: View>: View {
+    var label: String
+    @ViewBuilder var field: F
+    var body: some View {
+        VStack(alignment: .leading, spacing: 5) {
+            Text(label).font(.system(size: 11)).foregroundStyle(.white.opacity(0.6)).padding(.leading, 2)
+            field
+                .font(.system(size: 13))
+                .padding(.horizontal, 11).frame(height: 32)
+                .background(.black.opacity(0.16), in: .rect(cornerRadius: 9, style: .continuous))
+                .overlay(RoundedRectangle(cornerRadius: 9, style: .continuous).strokeBorder(.white.opacity(0.16), lineWidth: 0.5))
+        }
+    }
+}
+
+private struct MacNote: View {
+    enum Tone { case red, plain }
+    var text: String
+    var tone: Tone
+    var body: some View {
+        Text(text).font(.system(size: 11.5))
+            .foregroundStyle(tone == .red ? Color(red: 1, green: 0.55, blue: 0.55) : .white.opacity(0.6))
+            .fixedSize(horizontal: false, vertical: true)
+    }
+}
+
+/// Artha's capsule button: glass, a little brighter when it is the way forward.
+struct MacCapsuleButton: View {
+    var title: String
+    var symbol: String? = nil
+    var prominent: Bool
+    var wide: CGFloat? = nil
+    var action: () -> Void
+    @State private var hovered = false
+    @Environment(\.isEnabled) private var enabled
+    var body: some View {
+        Button(action: action) {
+            HStack(spacing: 7) {
+                if let symbol { Image(systemName: symbol).font(.system(size: 11.5)) }
+                Text(title)
+            }
+            .font(.system(size: wide == nil ? 13 : 13.5, weight: .medium))
+            .foregroundStyle(.white.opacity(enabled ? 0.95 : 0.4))
+            .padding(.horizontal, 18)
+            .frame(width: wide, height: wide == nil ? 30 : 38)
+            .contentShape(Capsule())
+            .vibeGlass(Capsule(), tint: .white.opacity(prominent ? (hovered ? 0.24 : 0.18) : (hovered ? 0.09 : 0.04)))
+        }
+        .buttonStyle(.plain)
+        .onHover { hovered = $0 }
+    }
+}
+#endif

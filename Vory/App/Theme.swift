@@ -25,7 +25,16 @@ enum AppTheme {
     static func accent(_ id: String) -> Accent { accents.first { $0.id == id } ?? accents[0] }
 
     /// The current accent, for views that paint it themselves (the message bubble).
-    static var current: Color { accent(UserDefaults.standard.string(forKey: accentKey) ?? "blue").color }
+    static var current: Color {
+        #if os(macOS)
+        return artha
+        #else
+        return accent(UserDefaults.standard.string(forKey: accentKey) ?? "blue").color
+        #endif
+    }
+
+    /// Artha's one accent on the Mac: a pale lavender that sits on the sky and glass without shouting.
+    static let artha = Color(red: 0.76, green: 0.74, blue: 1.0)
 }
 
 extension Color {
