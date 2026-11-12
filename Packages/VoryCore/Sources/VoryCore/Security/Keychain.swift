@@ -47,6 +47,9 @@ public enum Keychain {
     /// Mac app and its extensions share items the same way the iPhone does. A no-op elsewhere.
     private static func dataProtected(_ q: [String: Any]) -> [String: Any] {
         #if os(macOS)
+        // An ad-hoc signed build (the CI artifact) has no keychain-access-groups entitlement, and
+        // the data-protection keychain refuses it (-34018). With no group, use the login keychain.
+        guard accessGroup != nil else { return q }
         var q = q
         q[kSecUseDataProtectionKeychain as String] = true
         return q
