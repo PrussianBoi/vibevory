@@ -152,6 +152,15 @@ struct TranscriptView: View {
         wide ? (wideReplies ? columnWidth : max(320, columnWidth * 0.72)) : .infinity
     }
 
+    /// The bot beside the thread (Appearance › Chat): never on the Mac, whose thread has no faces (VibeVory).
+    private var botsBeside: Bool {
+        #if os(macOS)
+        return false
+        #else
+        return showBots
+        #endif
+    }
+
     private var visibleItems: [TranscriptItem] {
         chat.items.filter { item in
             switch item.kind {
@@ -182,7 +191,14 @@ struct TranscriptView: View {
         let key = RowCache.Key(chat: ObjectIdentifier(chat), items: chat.itemsRevision, showToolCalls: showToolCalls,
                                currentStepOnly: currentStepOnly, showSystemNotes: showSystemNotes,
                                showReasoning: showReasoning, day: day)
-        return rowCache.rows(for: key) { TranscriptRowModel.build(visibleItems, now: day) }
+        return rowCache.rows(for: key) {
+            #if os(macOS)
+            // Each run of tool calls between replies is one quiet line on the Mac (VibeVory).
+            return TranscriptRowModel.foldingSteps(TranscriptRowModel.build(visibleItems, now: day))
+            #else
+            return TranscriptRowModel.build(visibleItems, now: day)
+            #endif
+        }
     }
     /// True while the last item is a reply still waiting for its first words (that row shows
     /// the typing bubble itself).
@@ -206,8 +222,14 @@ struct TranscriptView: View {
                     // something" for a few frames before its rows landed (Matt, 2026-10-11).
                     if chat.items.isEmpty, chat.resumeError == nil, !chat.isResuming {
                         VStack(spacing: 8) {
+                            #if os(macOS)
+                            // VibeVory: no face over an empty thread, a quiet line on the sky.
+                            Text("Say something to \(chat.runtime.profiles.first { $0.name == chat.profileName }?.label ?? chat.profileName)")
+                                .font(.system(size: 12)).foregroundStyle(Ethereal.faint)
+                            #else
                             BotAvatar(profile: chat.profileName, size: 56)
                             Text("Say something to \(chat.runtime.profiles.first { $0.name == chat.profileName }?.label ?? chat.profileName)").foregroundStyle(.secondary)
+                            #endif
                         }
                         .frame(maxWidth: .infinity).padding(.top, 80)
                     }
@@ -218,7 +240,7 @@ struct TranscriptView: View {
                         HStack(alignment: .bottom, spacing: 10) {
                             // The working bot is pinned at the bottom-left of the thread (below);
                             // this only keeps the bubble in the bot column.
-                            if showBots { Color.clear.frame(width: 28, height: 1) }
+                            if botsBeside { Color.clear.frame(width: 28, height: 1) }
                             TypingBubble(tool: typingTool)
                             Spacer(minLength: 40)
                         }
@@ -238,14 +260,18 @@ struct TranscriptView: View {
                             // The Mac has no header pill over the thread: what the bot is working
                             // on, when the on-device model has written it, sits here with the step.
                             if let goal = ChatGoals.shared.goal(for: chat.storedID) {
-                                Label(goal, systemImage: "sparkles").font(.caption).foregroundStyle(.tint).lineLimit(1)
-                                Text("·").font(.caption).foregroundStyle(.tertiary)
+                                Label(goal, systemImage: "sparkles").font(Ethereal.small).foregroundStyle(Ethereal.dim).lineLimit(1)
+                                Text("·").font(Ethereal.small).foregroundStyle(Ethereal.faint)
                             }
                             #endif
+                            #if os(macOS)
+                            Text(s).font(Ethereal.small).foregroundStyle(Ethereal.faint).lineLimit(3).fixedSize(horizontal: false, vertical: true)
+                            #else
                             Text(s).font(.caption).foregroundStyle(.secondary).lineLimit(3).fixedSize(horizontal: false, vertical: true)
+                            #endif
                         }
                         // Clear of the bot column when the pinned working bot sits there.
-                        .padding(.leading, showBots ? 38 : 4).padding(.trailing, 4)
+                        .padding(.leading, botsBeside ? 38 : 4).padding(.trailing, 4)
                         .accessibilityElement(children: .contain)
                         .accessibilityIdentifier("thread.status")
                     }
@@ -383,7 +409,7 @@ struct TranscriptView: View {
             // beside whichever row was live and hopped between them as the turn went on.
             .overlay(alignment: .bottomLeading) {
                 ZStack {
-                    if showBots, chat.isRunning {
+                    if botsBeside, chat.isRunning {
                         // Plain while the reply writes (the thread's own typing bubble says so, decision A).
                         BotAvatar(profile: chat.profileName, size: 28, active: true, mood: BotFaceView.Mood(session: chat.storedID, state: chat.botState == .streaming ? .working : chat.botState))
                             .padding(.leading, 16).padding(.bottom, dockReach + 12)
@@ -1083,17 +1109,31 @@ struct RowContext: Equatable {
         return c
     }
 
+    /// The bot beside replies: never on the Mac, whose thread has no faces beside its words (VibeVory).
+    var rowProfile: String? {
+        #if os(macOS)
+        return nil
+        #else
+        return profile
+        #endif
+    }
+
     /// One row of the thread: the time separator before it when there is one, and the message
     /// with the time waiting past its right edge. `entering`: the row fades in if it is new
     /// (see `TranscriptView.enteringRowID`); every other row appears and goes as it is.
     @ViewBuilder func rowView(_ row: TranscriptRowModel, entering: Bool = false) -> some View {
         if let sep = row.separator {
+            #if os(macOS)
+            Text(sep).font(Ethereal.small).foregroundStyle(Ethereal.faint)
+                .frame(maxWidth: .infinity).padding(.vertical, 6)
+            #else
             Text(sep).font(.caption2.weight(.semibold)).foregroundStyle(.secondary)
                 .frame(maxWidth: .infinity).padding(.vertical, 6)
+            #endif
         }
         let id = row.item.id
         let actions = actions
-        TranscriptRow(item: row.item, profile: profile, bot: bot, botShown: row.lastOfRun,
+        TranscriptRow(item: row.item, profile: rowProfile, bot: bot, botShown: row.lastOfRun,
                       typingTool: bubbleTool(for: row.item), resendable: id == resendableID,
                       showReasoning: showReasoning && (!currentStepOnly || TranscriptView.isStreaming(row.item)), showStats: showStats,
                       onEdit: actions.onEdit, onOpenBot: actions.onOpenBot, onReply: actions.onReply, onChooseModel: actions.onChooseModel,
@@ -1103,6 +1143,9 @@ struct RowContext: Equatable {
                       onShowAll: actions.onShowAll, botLabel: botLabel,
                       toolOpen: openTools.contains(id), setToolOpen: { actions.setToolOpen(id, $0) },
                       showToolOutput: showToolOutput, compactTools: compactTools, wide: wide, maxBubble: maxBubble)
+            #if os(macOS)
+            .withSteps(row.steps)
+            #endif
             // Equatable on what it draws (the closures and the binding are
             // compared by value): a row whose message did not change is not
             // rebuilt when the thread re-evaluates for a scroll or a token.
@@ -1394,7 +1437,7 @@ enum ChatStyle {
     /// The reading column on a wide layout (the Mac, iPad, the open Duo): thread and composer
     /// share it, centred in the pane.
     #if os(macOS)
-    static let readingColumn: CGFloat = 760   // Hermes Desktop's ~46rem column
+    static let readingColumn: CGFloat = 620   // VibeVory's column (was Hermes Desktop's ~46rem, 760)
     #else
     static let readingColumn: CGFloat = 860
     #endif
@@ -1494,9 +1537,17 @@ struct TranscriptRowModel: Identifiable, Equatable {
     var separator: String?
     /// The last reply before something that is not a reply (the bot sits beside this one).
     var lastOfRun = true
+    #if os(macOS)
+    /// A run of work folded into this row (VibeVory's Mac thread, `foldingSteps`): the run's tool calls and thinking,
+    /// this row's own item first. Empty for every other row.
+    var steps: [TranscriptItem] = []
+    #endif
     var id: String { item.id }
     /// The row's kind in one word, for its accessibility identifier.
     var kindTag: String {
+        #if os(macOS)
+        if !steps.isEmpty { return "work" }
+        #endif
         switch item.kind {
         case .user: return "user"
         case .assistant: return item.isThinkingOnly ? "reasoning" : "reply"
@@ -1601,7 +1652,16 @@ struct TranscriptRow: View, Equatable {
             && a.reasoningOpen == b.reasoningOpen && a.toolOpen == b.toolOpen
             && a.showToolOutput == b.showToolOutput && a.compactTools == b.compactTools && a.wide == b.wide
             && a.maxBubble == b.maxBubble && a.interruptCause == b.interruptCause
+            && a.sameSteps(as: b)
     }
+    #if os(macOS)
+    /// The run of work this row folds into one line (`TranscriptRowModel.steps`); empty for any other row.
+    var steps: [TranscriptItem] = []
+    func withSteps(_ steps: [TranscriptItem]) -> TranscriptRow { var r = self; r.steps = steps; return r }
+    private func sameSteps(as other: TranscriptRow) -> Bool { steps == other.steps }
+    #else
+    private func sameSteps(as other: TranscriptRow) -> Bool { true }
+    #endif
     var item: TranscriptItem
     /// The bot beside its bubble, as in a group chat; nil for none. Only the last bubble of a
     /// run of replies gets the bot (`botShown`); the others keep the same left margin.
@@ -1658,14 +1718,28 @@ struct TranscriptRow: View, Equatable {
     /// The widest a bubble or card may be (the Mac's share of the reading column).
     var maxBubble: CGFloat = .infinity
     @Environment(\.colorScheme) private var scheme
+    /// The turn's figures and other small lines under a message: 11 pt and faint on the Mac (VibeVory).
+    #if os(macOS)
+    private var statsFont: Font { Ethereal.small.monospacedDigit() }
+    private var statsStyle: Color { Ethereal.faint }
+    #else
+    private var statsFont: Font { .caption2.monospacedDigit() }
+    private var statsStyle: HierarchicalShapeStyle { .tertiary }
+    #endif
 
     var body: some View {
         #if os(macOS)
-        // Like Messages: mine to the right, the bot's to the left, neither wider than its share;
-        // notices stay centred across the column.
+        // Mine to the right, no wider than its share of the column; the bot's words, its work and
+        // the notices take the whole column (VibeVory: replies are plain text on the sky).
         let side = macSide
-        content
-            .frame(maxWidth: side == .center ? .infinity : maxBubble, alignment: side)
+        Group {
+            if !steps.isEmpty {
+                WorkedLine(steps: steps, open: Binding(get: { toolOpen }, set: { @MainActor in setToolOpen($0) }), botLabel: botLabel, onShowAll: onShowAll)
+            } else {
+                content
+            }
+        }
+            .frame(maxWidth: side == .trailing ? maxBubble : .infinity, alignment: side)
             .frame(maxWidth: .infinity, alignment: side)
         #else
         content
@@ -1715,8 +1789,15 @@ struct TranscriptRow: View, Equatable {
                         }
                             .textSelection(.enabled)
                             .fixedSize(horizontal: false, vertical: true)
+                            #if os(macOS)
+                            // VibeVory: a soft glass pill (`bubble` on the Mac), small light words.
+                            .font(Ethereal.body)
+                            .padding(.horizontal, 13).padding(.vertical, 8)
+                            .foregroundStyle(Ethereal.text)
+                            #else
                             .padding(.horizontal, 14).padding(.vertical, 9)
                             .foregroundStyle(.white)
+                            #endif
                             .bubble(AppTheme.current, side: .trailing, tailed: botShown && bubbleStyle == "tailed", wholeOnMac: true) {
                                 Button { UIPasteboard.general.string = text } label: { Label("Copy", systemImage: "doc.on.doc") }
                                 Button { onSelectText(text) } label: { Label("Select Text", systemImage: "selection.pin.in.out") }
@@ -1761,13 +1842,18 @@ struct TranscriptRow: View, Equatable {
                     VStack(alignment: .leading, spacing: 6) {
                         if showReasoning, let reasoning, !reasoning.isEmpty {
                             ReasoningDisclosure(text: reasoning, streaming: streaming, open: Binding(get: { reasoningOpen }, set: { @MainActor in setReasoningOpen($0) }), onShowAll: { onShowAll("\(botLabel ?? "Bot") · Reasoning", $0) })
+                                #if os(macOS)
+                                // No bubble on the Mac: the card sits on the sky like the replies.
+                                .padding(.vertical, 4)
+                                #else
                                 .padding(.horizontal, 14).padding(.vertical, 9)
                                 .background(bubbleStyle == "plain" ? Color.clear : replyFill, in: MessageBubbleShape(side: .leading, tailed: false))
+                                #endif
                         }
                         if streaming {
                             TypingBubble(tool: typingTool)
                             if showStats, let s = item.stats {
-                                Text(s.label).font(.caption2.monospacedDigit()).foregroundStyle(.tertiary).padding(.leading, 6)
+                                Text(s.label).font(statsFont).foregroundStyle(statsStyle).padding(.leading, 6)
                                     .contentTransition(.numericText())
                                     .accessibilityLabel("Turn statistics: \(s.label)")
                             }
@@ -1784,14 +1870,23 @@ struct TranscriptRow: View, Equatable {
                     // the reply is done (#638).
                     let files = TranscriptMedia.files(in: text, streaming: streaming)
                     MarkdownView(text: media.isEmpty && files.isEmpty ? text : TranscriptMedia.words(in: text, streaming: streaming), streaming: streaming, inlineSelection: false, onShowAll: onShowAll).equatable()
+                        #if os(macOS)
+                        // VibeVory: plain words on the sky, 12.5 pt, airy, with a faint glow.
+                        .etherealReply()
+                        #endif
                     if !media.isEmpty { MediaThumbStrip(refs: media, profile: bot) }
                     if !files.isEmpty { FileCardStrip(refs: files, profile: bot) }
                     if showStats, let s = item.stats {
-                        Text(s.label).font(.caption2.monospacedDigit()).foregroundStyle(.tertiary)
+                        Text(s.label).font(statsFont).foregroundStyle(statsStyle)
                             .accessibilityLabel("Turn statistics: \(s.label)")
                     }
                 }
+                #if os(macOS)
+                // No bubble on the Mac (`bubble` draws none for the bot's side): the words keep only a hair of room.
+                .padding(.vertical, 2)
+                #else
                 .padding(.horizontal, bubbleStyle == "plain" ? 4 : 14).padding(.vertical, bubbleStyle == "plain" ? 4 : 9)
+                #endif
                 // On the Mac the whole bubble takes the right-click, padding and gaps too: on the
                 // words its selectable text gives its own menu, which has no Copy for the reply (#255).
                 .bubble(bubbleStyle == "plain" ? Color.clear : replyFill, side: .leading, tailed: botShown && bubbleStyle == "tailed", wholeOnMac: true) {
@@ -1828,14 +1923,23 @@ struct TranscriptRow: View, Equatable {
                     LongText(text)
                         .textSelection(.enabled)
                         .fixedSize(horizontal: false, vertical: true)
+                        #if os(macOS)
+                        .font(Ethereal.body).foregroundStyle(Ethereal.dim)
+                        .padding(.horizontal, 13).padding(.vertical, 8)
+                        #else
                         .padding(.horizontal, 14).padding(.vertical, 9)
+                        #endif
                         .bubble(Color(.systemGray4), side: .trailing, wholeOnMac: true) {
                             Button { UIPasteboard.general.string = text } label: { Label("Copy", systemImage: "doc.on.doc") }
                             // A steer isn't a turn the gateway can take back: its words go into a new message.
                             Button { onEdit(text, nil) } label: { Label("Copy to message", systemImage: "square.and.pencil") }
                         }
                     Label(status == "queued" ? "Steered · queued" : "Steered", systemImage: "arrow.turn.down.right")
+                        #if os(macOS)
+                        .font(Ethereal.small).foregroundStyle(Ethereal.faint)
+                        #else
                         .font(.caption2).foregroundStyle(.secondary)
+                        #endif
                 }
             }
         case .tool(let act) where act.delivery != nil:
@@ -1854,13 +1958,25 @@ struct TranscriptRow: View, Equatable {
             // and a quiet background keep it apart from the bot's words (a tester could neither
             // read nor copy the small grey line it was).
             VStack(alignment: .leading, spacing: 6) {
+                #if os(macOS)
+                Label("Command", systemImage: "terminal").font(Ethereal.small.weight(.medium)).foregroundStyle(Ethereal.faint)
+                LongText(text).etherealReply().textSelection(.enabled)
+                    .fixedSize(horizontal: false, vertical: true)
+                #else
                 Label("Command", systemImage: "terminal").font(.caption.weight(.semibold)).foregroundStyle(.secondary)
                 LongText(text).font(.body).textSelection(.enabled)
                     .fixedSize(horizontal: false, vertical: true)
+                #endif
             }
             .padding(12).padding(.trailing, 20)
             .frame(maxWidth: .infinity, alignment: .leading)
+            #if os(macOS)
+            // Soft glass-like smoke, not a dark card: the sky shows through.
+            .background(Ethereal.fill, in: .rect(cornerRadius: 12))
+            .overlay(RoundedRectangle(cornerRadius: 12, style: .continuous).strokeBorder(Ethereal.pillStroke, lineWidth: 0.5))
+            #else
             .background(Color(.secondarySystemBackground), in: .rect(cornerRadius: 12))
+            #endif
             .overlay(alignment: .topTrailing) { CopyButton(text: text).padding(6) }
         case .system(let text, let symbol):
             HStack(spacing: 6) {
@@ -1868,7 +1984,11 @@ struct TranscriptRow: View, Equatable {
                 Image(systemName: symbol).accessibilityHidden(true)
                 Text(text)
             }
+            #if os(macOS)
+            .font(Ethereal.small).foregroundStyle(Ethereal.faint)
+            #else
             .font(.caption).foregroundStyle(.secondary)
+            #endif
             .frame(maxWidth: .infinity)
             .padding(.vertical, 2)
         case .error(let text) where StartFailure.parse(text) != nil:
@@ -2444,7 +2564,11 @@ struct MarkdownView: View, Equatable {
     enum Style: Equatable {
         case reply, reasoning
         var showsCards: Bool { self == .reply }
+        #if os(macOS)
+        var codeFont: Font { self == .reply ? Ethereal.codeFont : .system(.caption, design: .monospaced) }
+        #else
         var codeFont: Font { self == .reply ? .system(.footnote, design: .monospaced) : .system(.caption, design: .monospaced) }
+        #endif
     }
 
     /// Parsed blocks and inline styling, kept for the text they came from: a row that scrolls
@@ -2506,7 +2630,13 @@ struct MarkdownView: View, Equatable {
     static func inlineCached(_ text: String) -> AttributedString {
         let key = text as NSString
         if let hit = inlineCache.object(forKey: key) { return hit.text }
+        #if os(macOS)
+        // VibeVory: inline code in a light periwinkle monospace.
+        var a = MarkdownParser.inline(text)
+        Ethereal.styleInlineCode(&a)
+        #else
         let a = MarkdownParser.inline(text)
+        #endif
         inlineCache.setObject(InlineBox(a), forKey: key, cost: text.utf8.count)
         return a
     }
@@ -2605,7 +2735,13 @@ struct MarkdownView: View, Equatable {
                 }
             }
             .frame(maxWidth: .infinity, alignment: .leading)
+            #if os(macOS)
+            // A faint wash with a hairline, not a dark card: the sky shows through (VibeVory).
+            .background(Ethereal.fill, in: .rect(cornerRadius: 10))
+            .overlay(RoundedRectangle(cornerRadius: 10, style: .continuous).strokeBorder(Ethereal.pillStroke, lineWidth: 0.5).allowsHitTesting(false))
+            #else
             .background(Color(.secondarySystemBackground), in: .rect(cornerRadius: 10))
+            #endif
         case .list(let items):
             VStack(alignment: .leading, spacing: 4) {
                 ForEach(Array(items.enumerated()), id: \.offset) { _, it in
@@ -2636,14 +2772,24 @@ struct MarkdownView: View, Equatable {
 extension MarkdownView {
     /// h1 and h2 keep their original look; h3 to h6 step down so they stay distinguishable.
     static func headingFont(_ level: Int) -> Font {
+        #if os(macOS)
+        // Near the 12.5 pt body (VibeVory): a title-sized line read loud in the small, light thread.
         switch level {
-        case ...1: .title2.weight(.bold)
-        case 2: .title3.weight(.semibold)
-        case 3: .headline
-        case 4: .subheadline.weight(.semibold)
-        case 5: .subheadline.weight(.medium)
-        default: .footnote.weight(.semibold)
+        case ...1: return .system(size: 15, weight: .semibold)
+        case 2: return .system(size: 14, weight: .semibold)
+        case 3: return .system(size: 13, weight: .semibold)
+        default: return .system(size: 12.5, weight: .semibold)
         }
+        #else
+        switch level {
+        case ...1: return .title2.weight(.bold)
+        case 2: return .title3.weight(.semibold)
+        case 3: return .headline
+        case 4: return .subheadline.weight(.semibold)
+        case 5: return .subheadline.weight(.medium)
+        default: return .footnote.weight(.semibold)
+        }
+        #endif
     }
 
     /// A Reasoning card's headings stay near its footnote text: a title-sized line in the
@@ -2922,7 +3068,8 @@ struct ToolCardView: View {
     private var expanded: Bool { open.wrappedValue }
     /// What the tool was asked: the command out of the args when they are JSON with one, the
     /// args as sent, or the context line.
-    private var fullCall: String? {
+    private var fullCall: String? { Self.fullCall(for: activity) }
+    nonisolated static func fullCall(for activity: ToolActivity) -> String? {
         if let a = activity.argsText, !a.isEmpty {
             if let m = a.firstMatch(of: /"command"\s*:\s*"((?:[^"\\]|\\.)*)"/) {
                 return String(m.1).replacingOccurrences(of: "\\n", with: "\n").replacingOccurrences(of: "\\\"", with: "\"").replacingOccurrences(of: "\\t", with: "\t")

@@ -46,6 +46,7 @@ jobs:
         run: |
           mkdir -p shots crash
           defaults write -g AppleInterfaceStyle Dark
+          defaults write com.vorantx.vory.demo companionPromptShown -bool true
           APP=demo/Vory.app
           BIN="$APP/Contents/MacOS/$(defaults read "$PWD/$APP/Contents/Info" CFBundleExecutable)"
           shot() {  # name, extra args, wait

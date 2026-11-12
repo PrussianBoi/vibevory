@@ -518,10 +518,16 @@ struct ComposerView: View {
         .sheet(isPresented: $showHistory) { HistorySheet(history: chat.composerHistory) { text = $0 }.sheetFrame().withAppModel() }
     }
 
+    #if os(macOS)
+    static let defaultPlaceholder = "Ask Hermes anything…"
+    #else
+    static let defaultPlaceholder = "Type / for commands"
+    #endif
+
     /// The field itself (its own view: the body's one expression grew past what the compiler
     /// types in reasonable time).
     private var textField: some View {
-        ComposerTextView(text: $text, placeholder: newMessage?.placeholder ?? "Type / for commands", focused: $focused, maxLines: visibleLines,
+        ComposerTextView(text: $text, placeholder: newMessage?.placeholder ?? Self.defaultPlaceholder, focused: $focused, maxLines: visibleLines,
                          accessibilityID: newMessage != nil ? "newchat.text" : "composer.text",
                          onSend: { Task { await send() } },
                          onPasteData: { data, name, type in stagePasted(data, name: name, type: type) },
@@ -531,8 +537,16 @@ struct ComposerView: View {
                          menuOpen: !menuItems.isEmpty || menuLoading,
                          onTab: { completeOnTab() },
                          onEscape: { dismissMenu() })
+            #if os(macOS)
+            // VibeVory: small, light words in the soft glass.
+            .font(Ethereal.body)
+            .foregroundStyle(Ethereal.text)
+            .padding(.horizontal, 0).padding(.top, 2)
+            .frame(minHeight: 22)
+            #else
             .padding(.horizontal, 4).padding(.top, 2)
             .frame(minHeight: 30)
+            #endif
             .task(id: chat.profile) { if !group { catalog = await chat.commandsCatalog() } }
             // Another bot in the New Message sheet's To: is another draft: its own model list.
             .onChange(of: ObjectIdentifier(chat)) { _, _ in modelOptions = nil; menuMark = nil }
@@ -628,22 +642,38 @@ struct ComposerView: View {
             // long press shows each control large instead. The words above keep their full size.
             .dynamicTypeSize(...DynamicTypeSize.xxxLarge)
         }
+        #if os(macOS)
+        // VibeVory: a floating soft-glass capsule, a hairline inside it and a soft shadow under it.
+        .padding(.leading, 15).padding(.trailing, 10).padding(.top, 11).padding(.bottom, 9)
+        .glassEffect(.regular.tint(dropTargeted ? Color.vory.opacity(0.35) : nil), in: .rect(cornerRadius: Self.cardRadius))
+        .glassEffectID("dock", in: namespace)
+        .overlay(RoundedRectangle(cornerRadius: Self.cardRadius, style: .continuous).strokeBorder(Ethereal.composerStroke, lineWidth: 0.5).allowsHitTesting(false))
+        .shadow(color: .black.opacity(0.35), radius: 25, y: 18)
+        #else
         .padding(.horizontal, 10).padding(.top, 10).padding(.bottom, 8)
         // Plain glass, not interactive: an interactive shape answers touches itself, and on the
         // phone that swallowed the taps meant for the text field's Paste menu.
         // While a drag is over the card (the Mac) the glass itself takes the tint: an overlay
         // alone came through the glass as a faint rim.
-        .glassEffect(.regular.tint(dropTargeted ? Color.vory.opacity(0.35) : nil), in: .rect(cornerRadius: 22))
+        .glassEffect(.regular.tint(dropTargeted ? Color.vory.opacity(0.35) : nil), in: .rect(cornerRadius: Self.cardRadius))
         .glassEffectID("dock", in: namespace)
+        #endif
         // The Mac's drop outline: drawn on the card's own shape while a drag is over it.
         .overlay {
             if dropTargeted {
-                RoundedRectangle(cornerRadius: 22, style: .continuous).strokeBorder(Color.vory, lineWidth: 2)
+                RoundedRectangle(cornerRadius: Self.cardRadius, style: .continuous).strokeBorder(Color.vory, lineWidth: 2)
                     .transition(.opacity)
             }
         }
         .animation(.snappy(duration: 0.15), value: dropTargeted)
     }
+
+    /// The card's corners: 20 on the Mac (VibeVory), 22 on the phone.
+    #if os(macOS)
+    static let cardRadius: CGFloat = 20
+    #else
+    static let cardRadius: CGFloat = 22
+    #endif
 
     /// The staged files, along the top of the card: a real preview of each, × on the corner.
     private var thumbnails: some View {
@@ -746,6 +776,22 @@ struct ComposerView: View {
             Section("Model") { ModelMenuContent(chat: chat) }
             ReasoningEffortMenu(chat: chat)
         } label: {
+            #if os(macOS)
+            // VibeVory: the model and the level as two small pills (one menu behind both, as before).
+            HStack(spacing: 6) {
+                HStack(spacing: 4) {
+                    Text(chat.modelName.isEmpty ? "Model" : Self.shortModel(chat.modelName)).lineLimit(1).truncationMode(.middle)
+                    Image(systemName: "chevron.down").font(.system(size: 7, weight: .semibold))
+                }
+                .etherealControlPill(hovered: chipHovered)
+                HStack(spacing: 4) {
+                    Text(ReasoningEffort.name(of: chat.reasoningEffort ?? "medium")).lineLimit(1)
+                    Image(systemName: "chevron.down").font(.system(size: 7, weight: .semibold))
+                }
+                .etherealControlPill(hovered: chipHovered)
+            }
+            .contentShape(.rect)
+            #else
             // Matt's wording (2026-10-10): the model's name in the text's own
             // tone, the level after it in a lighter one, no "Reasoning:"; at the accessibility
             // sizes the level stands alone.
@@ -763,6 +809,7 @@ struct ComposerView: View {
             // Under the pointer the capsule firms up (the Mac); a touch has no hover.
             .background(.quaternary.opacity(chipHovered ? 1 : 0.85), in: .capsule)
             .contentShape(.capsule)
+            #endif
         }
         .menuOrder(.fixed)
         .buttonStyle(.plain)
@@ -805,15 +852,24 @@ struct ComposerView: View {
                             .stroke(tint, style: StrokeStyle(lineWidth: 2.5, lineCap: .round))
                             .rotationEffect(.degrees(-90))
                     }
-                    .frame(width: 15, height: 15)
+                    .frame(width: Self.ringSide, height: Self.ringSide)
+                    #if os(macOS)
+                    Text(contextAsTokens ? Self.tokensLabel(chat.usage) : "\(pct)%").font(.system(size: 11)).monospacedDigit()
+                        .foregroundStyle(pct >= 80 ? tint : Ethereal.faint)
+                    #else
                     Text(contextAsTokens ? Self.tokensLabel(chat.usage) : "\(pct)%").font(.caption.weight(.medium)).monospacedDigit()
                         .foregroundStyle(pct >= 80 ? tint : Color.secondary)
+                    #endif
                 }
                 .fixedSize()
                 .padding(.trailing, 4)
                 // The row's height to tap, as the + beside it (36 pt): the ring and its number alone were a
-                // 16 pt strip (the audit's "hit area is too small").
+                // 16 pt strip (the audit's "hit area is too small"). The Mac's row is the 24 pt of its pills.
+                #if os(macOS)
+                .frame(minHeight: 24)
+                #else
                 .frame(minHeight: 36)
+                #endif
                 .contentShape(.rect)
             }
             .buttonStyle(.plain)
@@ -827,6 +883,13 @@ struct ComposerView: View {
             .sheet(isPresented: $showContextSheet) { ContextBreakdownSheet(chat: chat).sheetFrame().withAppModel() }
         }
     }
+
+    /// The context ring's size: 12 on the Mac's small row (VibeVory), 15 on the phone.
+    #if os(macOS)
+    static let ringSide: CGFloat = 12
+    #else
+    static let ringSide: CGFloat = 15
+    #endif
 
     /// "18/200K": the context used and its window, in thousands (one decimal under 10K).
     static func tokensLabel(_ u: Usage?) -> String {
@@ -846,8 +909,13 @@ struct ComposerView: View {
             ProgressView().controlSize(.small).frame(width: 28, height: 28).accessibilityLabel("Transcribing")
         } else if chat.isRunning, text.isEmpty {
             Button { Task { await chat.stop() } } label: {
+                #if os(macOS)
+                Image(systemName: "stop.fill").font(.system(size: 9, weight: .bold)).foregroundStyle(Ethereal.sendGlyph)
+                    .frame(width: 24, height: 24).background(Ethereal.sendFill, in: .circle)
+                #else
                 Image(systemName: "stop.fill").font(.caption.weight(.bold)).foregroundStyle(.white)
                     .frame(width: 28, height: 28).background(.red, in: .circle)
+                #endif
             }
             .buttonStyle(.plain)
             .accessibilityLabel("Stop")
@@ -862,8 +930,14 @@ struct ComposerView: View {
             // An edit on its way is sent once (#556).
             let disabled = (text.trimmingCharacters(in: .whitespaces).isEmpty && chat.staged.isEmpty) || chat.resending
             Button { Task { await send() } } label: {
+                #if os(macOS)
+                // VibeVory: a small near-white circle with a dark arrow.
+                Image(systemName: "arrow.up").font(.system(size: 11, weight: .bold)).foregroundStyle(Ethereal.sendGlyph)
+                    .frame(width: 24, height: 24).background(Ethereal.sendFill.opacity(disabled ? 0.35 : 1), in: .circle)
+                #else
                 Image(systemName: "arrow.up").font(.body.weight(.bold)).foregroundStyle(.white)
                     .frame(width: 28, height: 28).background(disabled ? AnyShapeStyle(.tertiary) : AnyShapeStyle(Color.vory), in: .circle)
+                #endif
             }
             .buttonStyle(.plain)
             .disabled(disabled)
@@ -887,6 +961,16 @@ struct ComposerView: View {
         } label: {
             // Same 36pt as the single-line capsule; a glass *button* style added its own padding
             // and grew past the bar.
+            #if os(macOS)
+            // VibeVory: a small 22 pt pill like the model's.
+            Image(systemName: "plus").font(.system(size: 11, weight: .medium))
+                .foregroundStyle(Ethereal.dim)
+                .rotationEffect(.degrees(showAttach ? 45 : 0))
+                .frame(width: 22, height: 22)
+                .background(Ethereal.fill, in: .circle)
+                .contentShape(.circle)
+                .onGeometryChange(for: CGRect.self) { $0.frame(in: .named("composerStack")) } action: { attachButtonFrame = $0 }
+            #else
             Image(systemName: "plus").font(.body.weight(.semibold))
                 .rotationEffect(.degrees(showAttach ? 45 : 0))
                 .frame(width: 36, height: 36)
@@ -895,6 +979,7 @@ struct ComposerView: View {
                 .contentShape(.circle)
                 .glassEffect(.regular.interactive(), in: .circle)
                 .onGeometryChange(for: CGRect.self) { $0.frame(in: .named("composerStack")) } action: { attachButtonFrame = $0 }
+            #endif
         }
         .buttonStyle(.plain)
         .accessibilityIdentifier(newMessage != nil ? "newchat.attach" : "composer.attach")

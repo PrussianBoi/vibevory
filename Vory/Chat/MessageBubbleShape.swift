@@ -65,12 +65,16 @@ extension View {
             .contextMenu { menu() }
             .padding(edge, -MessageBubbleShape.tail)
         #else
-        // Liquid Glass over the window's sky: mine tinted with the accent, the bot's clear glass.
-        let glass: Glass = side == .trailing ? .regular.tint(Color.accentColor.opacity(0.42)) : .regular
-        if wholeOnMac {
-            glassEffect(glass, in: MessageBubbleShape(side: side, tailed: tailed)).contentShape(.rect).contextMenu { menu() }
+        // VibeVory: mine a soft glass pill (no accent, no tail), the bot's words no bubble at all, on the sky. The
+        // fill and tail arguments are the phone's.
+        if side == .trailing {
+            if wholeOnMac {
+                etherealPill().contentShape(.rect).contextMenu { menu() }
+            } else {
+                etherealPill().contextMenu { menu() }
+            }
         } else {
-            glassEffect(glass, in: MessageBubbleShape(side: side, tailed: tailed)).contextMenu { menu() }
+            contentShape(.rect).contextMenu { menu() }
         }
         #endif
     }

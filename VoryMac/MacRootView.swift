@@ -212,7 +212,7 @@ private struct MainSplitView: View {
                         HermesSidebar(tabs: tabs, chatPath: $chatPath, floating: true)
                             .frame(width: SidebarChrome.width)
                             .frame(maxHeight: .infinity)
-                            .glassEffect(.regular, in: .rect(cornerRadius: 18))
+                            .glassEffect(.clear.tint(.black.opacity(0.32)), in: .rect(cornerRadius: 18))
                             .shadow(color: .black.opacity(0.4), radius: 30, y: 18)
                             .padding(8)
                             .onHover { inside in if inside { chrome.reveal() } else { chrome.leave() } }

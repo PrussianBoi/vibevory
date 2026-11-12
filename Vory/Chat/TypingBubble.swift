@@ -9,6 +9,17 @@ struct TypingBubble: View {
     private var fill: Color { dark ? Color(white: 0.12) : Color(.systemGray5) }
 
     var body: some View {
+        #if os(macOS)
+        // VibeVory: no bubble, no badge. Small dim dots on the sky, a terminal mark before them while a tool runs.
+        HStack(spacing: 8) {
+            if tool != nil {
+                Image(systemName: "apple.terminal").font(.system(size: 11)).foregroundStyle(Ethereal.dim).accessibilityHidden(true)
+            }
+            TypingDots(color: Ethereal.dim, dot: 5, gap: 4)
+        }
+        .padding(.vertical, 6).padding(.leading, 2)
+        .accessibilityLabel(tool.map { "Running \($0)" } ?? "Typing")
+        #else
         HStack(spacing: 10) {
             if tool != nil { ToolBadge() }
             TypingDots(color: dark ? Color.white.opacity(0.75) : Color(.systemGray))
@@ -20,12 +31,16 @@ struct TypingBubble: View {
         .overlay(alignment: .bottomLeading) { Circle().fill(fill).frame(width: 5, height: 5).offset(x: -10, y: 9) }
         .padding(.leading, 6).padding(.bottom, 6)
         .accessibilityLabel(tool.map { "Running \($0)" } ?? "Typing")
+        #endif
     }
 }
 
 /// Three dots, each rising and brightening in turn, then a beat of rest — Messages' rhythm.
 struct TypingDots: View {
     var color: Color
+    /// The dots' size and the gap between them (the Mac's are smaller, VibeVory).
+    var dot: CGFloat = 8
+    var gap: CGFloat = 6
     #if os(macOS)
     /// On the Mac the dots hold still where no one can see them, or under Reduce Motion (#248).
     @Environment(\.botsLive) private var botsLive
@@ -52,12 +67,12 @@ struct TypingDots: View {
     }
 
     private func dots(at t: Double) -> some View {
-        HStack(spacing: 6) {
+        HStack(spacing: gap) {
             ForEach(0..<3, id: \.self) { i in
                 let p = (t * 1.05 - Double(i) * 0.16).truncatingRemainder(dividingBy: 1)
                 let k = p < 0.55 ? sin(p / 0.55 * .pi) : 0
                 Circle().fill(color)
-                    .frame(width: 8, height: 8)
+                    .frame(width: dot, height: dot)
                     .opacity(0.45 + 0.55 * k)
                     .offset(y: -3 * k)
             }

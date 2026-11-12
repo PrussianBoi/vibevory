@@ -246,11 +246,22 @@ struct ConversationView: View {
     private func framed(_ chat: ChatSession) -> some View {
         #if os(macOS)
         thread(chat)
+            // VibeVory: the thread fades out under the title bar's tabs instead of running into them.
+            .mask {
+                VStack(spacing: 0) {
+                    LinearGradient(colors: [.clear, .black], startPoint: .top, endPoint: .bottom).frame(height: 84)
+                    Color.black
+                }
+                .ignoresSafeArea()
+            }
             // With no toolbar strip the thread runs up under the bot's pill and the window's edge
             // at full strength, as on the phone (Matt, 2026-10-10: "remove the fades on the Mac
             // too"); the 68 pt top fade mask that used to soften it is gone.
             .safeAreaInset(edge: .bottom, spacing: 0) {
-                dock(chat).frame(maxWidth: ChatStyle.readingColumn).frame(maxWidth: .infinity)
+                // VibeVory: the composer floats as wide as the reading column (the dock's own 12 pt sides added),
+                // about 22 pt above the window's bottom edge.
+                dock(chat).frame(maxWidth: ChatStyle.readingColumn + 24).frame(maxWidth: .infinity)
+                    .padding(.bottom, 22 - BottomDock.bottomPadding)
             }
             .navigationSubtitle(pageShown ? macSubtitle(chat) : "")
             // No toolbar strip over the thread: the bot and the menu float on the window, as in
@@ -258,29 +269,11 @@ struct ConversationView: View {
             // toolbar's own background spread down over that gap as a lighter band.
             // VibeVory: the chat tabs live in the title bar, so it has its frosted band again, and the
             // thread scrolls under the glass instead of behind the tabs.
-            .toolbarBackgroundVisibility(.visible, for: .windowToolbar)
+            .toolbarBackgroundVisibility(.hidden, for: .windowToolbar)
             .toolbar {
                 // Only while the Chats page is on show (the Mac keeps it mounted behind the
                 // other pages, see MainSplitView): its items must not stand in their toolbar.
                 if pageShown {
-                // The bot, in the middle over its thread; a click opens its profile.
-                ToolbarItem(placement: .principal) {
-                    // The face's small turn plays on the click, as on the iPhone's pill.
-                    Button { BotAmbient.shared.tap(profile: chat.profileName, session: chat.storedID); showProfile = true } label: {
-                        HStack(spacing: 7) {
-                            // The pose the header shows on the phone, in the pill (the Mac's toolbar hosts it).
-                            BotAvatar(profile: chat.profileName, size: 22, active: chat.isRunning, mood: BotFaceView.Mood(session: chat.storedID, state: chat.botState))
-                                // Part of the button's label: while the bot worked, the live face's own tap
-                                // took the click and the profile did not open; the button plays the turn now.
-                                .allowsHitTesting(false)
-                            Text(botLabel(chat))
-                                .font(.headline).lineLimit(1)
-                        }
-                        .padding(.horizontal, 4)
-                    }
-                    .help(macSubtitle(chat))
-                    .accessibilityIdentifier("chat.bot")
-                }
                 // The whole conversation by voice, in its own small window.
                 ToolbarItem(placement: .primaryAction) {
                     let on = HandsFreeSession.shared.isActive(for: chat)
