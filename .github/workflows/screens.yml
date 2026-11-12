@@ -35,7 +35,7 @@ jobs:
 
       - name: Mock gateway
         run: |
-          python3 -m pip install --quiet --break-system-packages websockets || python3 -m pip install --quiet websockets
+          python3 -m pip install --quiet --break-system-packages websockets pyobjc-framework-Quartz || python3 -m pip install --quiet websockets
           nohup python3 Tools/mock-gateway/mock_gateway.py --port 9119 --token mock-token > mock.log 2>&1 &
           for i in $(seq 1 30); do curl -sf http://127.0.0.1:9119/api/status >/dev/null && break; sleep 1; done
 
@@ -44,19 +44,24 @@ jobs:
           mkdir -p shots
           defaults write -g AppleInterfaceStyle Dark
           APP=demo/Vory.app
+          BIN="$APP/Contents/MacOS/$(defaults read "$PWD/$APP/Contents/Info" CFBundleExecutable)"
           shot() {  # name, extra args, wait
-            open -n "$APP" --args -vory-demo-gateway http://127.0.0.1:9119 mock-token Home $2
+            "$BIN" -vory-demo-gateway http://127.0.0.1:9119 mock-token Home $2 >> app.log 2>&1 &
+            PID=$!
             sleep "$3"
             osascript -e 'tell application id "com.vorantx.vory.demo" to activate' || true
             sleep 3
+            echo "== $1: windows" >> app.log
+            python3 -c 'import Quartz;[print(w.get("kCGWindowOwnerName"),w.get("kCGWindowName"),dict(w.get("kCGWindowBounds")),w.get("kCGWindowLayer")) for w in Quartz.CGWindowListCopyWindowInfo(0,0)]' >> app.log 2>&1 || true
             screencapture -x "shots/$1.png"
-            osascript -e 'tell application id "com.vorantx.vory.demo" to quit' || pkill -f "$APP" || true
+            kill $PID 2>/dev/null || true
             sleep 3
           }
           shot 01-empty "" 20
           shot 02-chat "-vibe-open-chat 20260921_154212_a1b2c3" 25
           shot 03-chat-tools "-vibe-open-chat 20260921_093355_d4e5f6" 25
           ls -la shots
+          mkdir -p crash; cp ~/Library/Logs/DiagnosticReports/*.ips crash/ 2>/dev/null || true
 
       - uses: actions/upload-artifact@v4
         if: always()
@@ -67,4 +72,5 @@ jobs:
             app.log
             mock.log
             build.log
+            crash/
           retention-days: 14
