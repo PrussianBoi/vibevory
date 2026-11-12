@@ -29,12 +29,12 @@ struct AuroraBackground: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.controlActiveState) private var activeState
     @Environment(\.displayScale) private var displayScale
-    @AppStorage("vibe.skyScene") private var sceneName = SkyScene.sunset.rawValue
+    @AppStorage("vibe.skyScene") private var sceneName = SkyScene.aurora.rawValue
     var downscale: CGFloat = 3
     private static let start = Date()
 
     var body: some View {
-        let scene = SkyScene(rawValue: sceneName) ?? .sunset
+        let scene = SkyScene(rawValue: sceneName) ?? .aurora
         GeometryReader { geo in
             let size = CGSize(width: max(1, geo.size.width / downscale), height: max(1, geo.size.height / downscale))
             TimelineView(.animation(minimumInterval: 1.0 / 24.0, paused: reduceMotion || activeState == .inactive)) { context in

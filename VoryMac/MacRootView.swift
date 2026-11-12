@@ -262,6 +262,7 @@ private struct MainSplitView: View {
                 if args[i + 1] == "reveal" { try? await Task.sleep(for: .seconds(5)); chrome.reveal() }
             }
             if args.contains("-vibe-open-palette") { try? await Task.sleep(for: .seconds(6)); CommandPaletteState.shared.toggle() }
+            if args.contains("-vibe-open-settings") { try? await Task.sleep(for: .seconds(4)); model.selectedTab = .settings }
         }
         #endif
         #if DEBUG

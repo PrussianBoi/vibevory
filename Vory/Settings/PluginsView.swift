@@ -16,7 +16,8 @@ struct PluginsView: View {
     var body: some View {
         SettingsList {
             SettingsHeaderSection(title: "Plugins", symbol: "puzzlepiece.extension.fill", color: .orange,
-                                  description: "Everything the gateway loads beside the agent itself: Artha's companion, the plugins you installed, and the ones Hermes ships with.")
+                                  description: DeviceWords.isMac ? "Everything the gateway loads beside the agent itself: the plugins you installed, and the ones Hermes ships with." : "Everything the gateway loads beside the agent itself: Artha's companion, the plugins you installed, and the ones Hermes ships with.")
+            if !DeviceWords.isMac {
             Section {
                 if let c = companion {
                     PluginRow(plugin: c, highlight: true)
@@ -30,6 +31,7 @@ struct PluginsView: View {
                         .font(.footnote).foregroundStyle(.secondary)
                 }
             } header: { Text("Artha") }
+            }
             Section {
                 if loading, hub == nil { ProgressView() }
                 if let error { Text(error).font(.footnote).foregroundStyle(.red) }

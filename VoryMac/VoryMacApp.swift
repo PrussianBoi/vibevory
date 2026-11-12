@@ -92,7 +92,7 @@ struct VoryMacApp: App {
                 // Bots move only while this window is visible and in front (#248).
                 .botWindowLiveness(needsKey: true)
                 .environment(model)
-                .preferredColorScheme(scheme == "light" ? .light : scheme == "dark" ? .dark : nil)
+                .preferredColorScheme(.dark) // Artha is dark only: its glass and sky have no light version.
                 .onOpenURL { url in model.open(url) }
                 .continuesHandoff(model)
                 .task {

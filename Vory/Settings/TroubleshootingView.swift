@@ -73,7 +73,7 @@ struct TroubleshootingView: View {
                 }
                 .accessibilityIdentifier("troubleshooting.healthReports")
             }
-            ForEach(topics) { t in
+            ForEach(topics.filter { !(DeviceWords.isMac && ["companion", "push"].contains($0.id)) }) { t in
                 Section {
                     ForEach(Array(t.checks.enumerated()), id: \.offset) { i, c in
                         HStack(alignment: .firstTextBaseline, spacing: 10) {
@@ -87,7 +87,7 @@ struct TroubleshootingView: View {
                 }
             }
             Section {
-                Text("Still stuck? Take a screenshot in the app to send it through TestFlight, or write to matt@vory.dev with what the connection test showed.")
+                Text(DeviceWords.isMac ? "Still stuck? Note what the connection test showed and check the gateway's own log (hermes logs)." : "Still stuck? Take a screenshot in the app to send it through TestFlight, or write to matt@vory.dev with what the connection test showed.")
                     .font(.footnote).foregroundStyle(.secondary)
             }
             #if os(iOS)

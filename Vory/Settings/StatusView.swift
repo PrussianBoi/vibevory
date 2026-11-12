@@ -55,6 +55,7 @@ struct StatusView: View {
                 }
             } header: { Text("Connection") }
 
+            if !DeviceWords.isMac {
             Section {
                 if model.runtime != nil {
                     row("Companion", light: companionLight, detail: companionDetail) { CompanionView() }
@@ -64,6 +65,7 @@ struct StatusView: View {
                 }
             } header: { Text("On the gateway") } footer: {
                 Text("The Companion is the plugin on your gateway that sends notifications\(DeviceWords.isMac ? " and approval cards" : ", approval cards and the Live Activity") while Artha is closed.")
+            }
             }
 
             Section {
@@ -75,8 +77,8 @@ struct StatusView: View {
 
             Section {
                 LabeledContent("Artha", value: "\(Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "?") (\(Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? "?"))")
-                LabeledContent("Companion this build ships", value: PushSetupModel.bundledPluginVersion)
-                if let v = setup.installedVersion { LabeledContent("Companion on the gateway", value: v) }
+                if !DeviceWords.isMac { LabeledContent("Companion this build ships", value: PushSetupModel.bundledPluginVersion) }
+                if !DeviceWords.isMac, let v = setup.installedVersion { LabeledContent("Companion on the gateway", value: v) }
             } header: { Text("Versions") }
         }
         .untitledPage()

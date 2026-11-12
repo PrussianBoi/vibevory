@@ -33,7 +33,7 @@ struct SettingsView: View {
         [
             Row(id: "status", title: "Status", symbol: "waveform.path.ecg", color: .green, destination: AnyView(StatusView())),
             Row(id: "notifications", title: "Notifications", symbol: "bell.badge", color: .red, destination: AnyView(NotificationsView())),
-            Row(id: "security", title: "Security", symbol: "faceid", color: .green, destination: AnyView(SecurityView())),
+            Row(id: "security", title: "Security", symbol: DeviceWords.isMac ? "touchid" : "faceid", color: .green, destination: AnyView(SecurityView())),
             Row(id: "icloud", title: "iCloud Sync", symbol: "icloud.fill", color: .cyan, destination: AnyView(CloudSyncView())),
             Row(id: "bots", title: "Bots", symbol: "cloud.fill", color: .indigo, destination: AnyView(BotsSettingsView())),
             Row(id: "appearance", title: "Appearance", symbol: "circle.lefthalf.filled", color: .black, destination: AnyView(AppearanceView())),
@@ -47,9 +47,10 @@ struct SettingsView: View {
         ]
     }
 
-    /// The search, and the Board only when the gateway has its kanban plugin.
+    /// The search, and the Board only when the gateway has its kanban plugin. The Mac build has no iCloud and no
+    /// push, so iCloud Sync and the Companion are left out there.
     private func filtered(_ rows: [Row]) -> [Row] {
-        let shown = rows.filter { $0.id != "kanban" || model.runtime?.kanban.isPresent == true }
+        let shown = rows.filter { ($0.id != "kanban" || model.runtime?.kanban.isPresent == true) && !(DeviceWords.isMac && ["icloud", "companion"].contains($0.id)) }
         return search.isEmpty ? shown : shown.filter { $0.title.localizedCaseInsensitiveContains(search) }
     }
     @AppStorage(BotColors.storageKey) private var botColorsRaw = ""
@@ -64,7 +65,7 @@ struct SettingsView: View {
         NavigationStack {
             SettingsList {
                 // A gateway of the person's own only (#494): dismissed in the demo, it never showed for theirs.
-                if search.isEmpty, !setupCardDone, model.runtime.map({ !$0.isEphemeral }) == true, model.push.registeredAt == nil {
+                if !DeviceWords.isMac, search.isEmpty, !setupCardDone, model.runtime.map({ !$0.isEphemeral }) == true, model.push.registeredAt == nil {
                     Section {
                         NavigationLink { CompanionView().pushedPage() } label: {
                             HStack(spacing: 12) {
@@ -114,7 +115,7 @@ struct SettingsView: View {
                                 Label("Connect your gateway", systemImage: "network")
                             }
                             .accessibilityIdentifier("settings.connectGateway")
-                        } else if !model.store.connections.isEmpty {
+                        } else if !DeviceWords.isMac, !model.store.connections.isEmpty {
                             Button { Task { await model.startDemo() } } label: { Label("Try the demo", systemImage: "sparkles") }
                                 .accessibilityHint("Opens Artha with demo bots. Leave demo in Settings brings your gateway back.")
                                 .accessibilityIdentifier("settings.tryDemo")
@@ -411,7 +412,8 @@ struct NotificationsView: View {
         let push = model.push
         SettingsList {
             SettingsHeaderSection(title: "Notifications", symbol: "bell.badge", color: .red, description: "Permission\(!DeviceWords.isMac ? ", Live Activities and haptics" : "") on \(DeviceWords.this).")
-            Section {
+            // The Mac build has no push: the switch only registers for Companion push, which can't arrive there.
+            if !DeviceWords.isMac { Section {
                 // In the demo (#392) it reads off and can't be turned: it registers with the person's own gateway and the
                 // relay, and the demo has neither (its notifications are the app's own, on this device).
                 Toggle("Notifications", isOn: model.isInDemo ? .constant(false) : $notificationsOn)
@@ -425,7 +427,7 @@ struct NotificationsView: View {
                 } else {
                     Text(notificationsOn ? "\(DeviceWords.this.capitalized) is registered with the gateway for approvals, questions, finished turns and errors while Artha is closed." : "Off: \(DeviceWords.this) is removed from the gateway's device list, so the Companion sends it nothing. Turn it on to register again.")
                 }
-            }
+            } }
             #if os(iOS)
             Section {
                 Toggle("Quiet for chats driven from a Mac", isOn: $muteDesktopOrigin)
@@ -465,11 +467,13 @@ struct NotificationsView: View {
                 Text("Running turns and waiting approvals also sit in the menu bar, with a badge on the Dock icon.")
                 #endif
             }
+            if !DeviceWords.isMac {
             Section {
                 NavigationLink { CompanionView().pushedPage() } label: { Label("Companion", systemImage: "puzzlepiece.extension") }
                     .disabled(model.runtime == nil)
             } footer: {
                 Text("Approvals, questions, finished turns and errors while Artha is closed are delivered by the Companion on your gateway. In the foreground they arrive locally without it.")
+            }
             }
         }
         .task { await push.refreshAuthorization() }
@@ -740,7 +744,7 @@ struct AppearanceView: View {
 
     @AppStorage(ChatStyle.headerShowsTitle) private var headerShowsTitle = false
     #if os(macOS)
-    @AppStorage("vibe.skyScene") private var skyScene = SkyScene.sunset.rawValue
+    @AppStorage("vibe.skyScene") private var skyScene = SkyScene.aurora.rawValue
     private func tabBinding(_ tab: AppModel.AppTab) -> Binding<Bool> {
         Binding(get: { layout.contains(tab) }, set: { on in var l = layout; l.set(tab, enabled: on); layoutRaw = l.encoded })
     }
@@ -765,6 +769,8 @@ struct AppearanceView: View {
                 }
             } footer: { Text("What the pill under the bot leads with in a chat; the other is shown beneath it while the bot is idle.") }
             #endif
+            // The Mac is dark only, in its own palette: no accent or theme to pick there.
+            if !DeviceWords.isMac {
             Section {
                 AccentPicker()
             } header: { Text("Accent") } footer: { Text("Buttons, the selected tab, links and your bubbles take this colour. Bots keep their own.") }
@@ -777,6 +783,7 @@ struct AppearanceView: View {
                 .pickerStyle(.segmented)
             } header: { Text("Appearance") } footer: {
                 Text("Liquid Glass intensity, Reduce Transparency, Increase Contrast, Bold Text, Dynamic Type and Reduce Motion follow \(DeviceWords.isMac ? "System Settings" : "\(DeviceWords.your)'s own settings").")
+            }
             }
             #if os(macOS)
             Section {
@@ -936,12 +943,15 @@ struct AppearanceView: View {
                 Text("Only the current step keeps just the tool running now and the reasoning of the reply being written; finished steps leave the thread. Everything is still kept, and turning it off brings it all back.")
             }
             Section {
-                Picker("Bubbles", selection: $bubbleStyle) {
-                    Text("Tailed").tag("tailed")
-                    Text("Rounded").tag("rounded")
-                    Text("Plain").tag("plain")
+                // The Mac draws replies without bubbles, so neither does anything there.
+                if !DeviceWords.isMac {
+                    Picker("Bubbles", selection: $bubbleStyle) {
+                        Text("Tailed").tag("tailed")
+                        Text("Rounded").tag("rounded")
+                        Text("Plain").tag("plain")
+                    }
+                    Toggle("Bot colour on replies", isOn: $botTint)
                 }
-                Toggle("Bot colour on replies", isOn: $botTint)
                 Toggle("Wide replies", isOn: $wideReplies)
                 Picker("Text size", selection: $textSize) {
                     Text("Small").tag("small")
@@ -953,7 +963,7 @@ struct AppearanceView: View {
             }
             Section {
                 Button("Clear chat list cache") { SessionCache.clearAll() }
-                Button("Reset to default") { layoutRaw = ""; scheme = "system"; showToolCalls = true; showReasoning = true; showTurnStats = true; showSystemNotes = true; collapseAfterTurn = false; showToolOutput = true; compactTools = false; currentStepOnly = false; wideReplies = false; textSize = "default"; bubbleStyle = "tailed"; botTint = false }
+                Button("Reset to default") { layoutRaw = ""; scheme = DeviceWords.isMac ? "dark" : "system"; showToolCalls = true; showReasoning = true; showTurnStats = true; showSystemNotes = true; collapseAfterTurn = false; showToolOutput = true; compactTools = false; currentStepOnly = false; wideReplies = false; textSize = "default"; bubbleStyle = "tailed"; botTint = false }
             } footer: { Text("The Chats tab remembers its last list so it opens instantly; clearing it just forces a fresh fetch.") }
         }
     }
@@ -979,10 +989,12 @@ struct ResetView: View {
         // hides it), which matters with an erase among the choices.
         .alert("Reset Artha on \(DeviceWords.this)?", isPresented: $confirmReset) {
             Button("Reset \(DeviceWords.ThisTitle)", role: .destructive) { Task { await model.resetApp(eraseCloud: false) } }
-            Button("Reset and Erase iCloud Data", role: .destructive) { Task { await model.resetApp(eraseCloud: true) } }
+            if !DeviceWords.isMac {
+                Button("Reset and Erase iCloud Data", role: .destructive) { Task { await model.resetApp(eraseCloud: true) } }
+            }
             Button("Cancel", role: .cancel) {}
         } message: {
-            Text("Every saved gateway and sign-in, every setting and every bot look is removed from \(DeviceWords.this), and it stops receiving notifications. Your chats and bots live on the gateway and are not touched. What is in iCloud stays, so Restore from iCloud can bring it back, unless you erase that too; your other devices then stop syncing until you turn it on again there.")
+            Text(DeviceWords.isMac ? "Every saved gateway and sign-in, every setting and every bot look is removed from this Mac. Your chats and bots live on the gateway and are not touched." : "Every saved gateway and sign-in, every setting and every bot look is removed from \(DeviceWords.this), and it stops receiving notifications. Your chats and bots live on the gateway and are not touched. What is in iCloud stays, so Restore from iCloud can bring it back, unless you erase that too; your other devices then stop syncing until you turn it on again there.")
         }
         .untitledPage()
     }
@@ -990,7 +1002,7 @@ struct ResetView: View {
 
 struct AboutView: View {
     static let feedbackAddress = "matt@vory.dev"
-    static let sourceURL = URL(string: "https://github.com/vory-dev/vory")!
+    static let sourceURL = URL(string: DeviceWords.isMac ? "https://github.com/PrussianBoi/vibevory" : "https://github.com/vory-dev/vory")!
     @Environment(AppModel.self) private var model
     @State private var copiedAddress = false
     @State private var taps = 0
@@ -1008,6 +1020,8 @@ struct AboutView: View {
                 .listSectionSpacing(8)
             Section {
                 VStack(spacing: 6) {
+                    // Vory's cloud mascot stays off the Mac.
+                    if !DeviceWords.isMac {
                     ZStack(alignment: .top) {
                         if raining {
                             // Falls from under the cloud, not out of its middle.
@@ -1029,6 +1043,7 @@ struct AboutView: View {
                     .padding(.top, 16)
                     .contentShape(Rectangle())
                     .onTapGesture { tapped() }
+                    }
                     Text("Artha").font(.title.weight(.bold))
                     Text("Version \(appVersion)").font(.footnote).foregroundStyle(.secondary)
                 }
@@ -1040,6 +1055,7 @@ struct AboutView: View {
             // Close under the header card: the page then fits the cloud, the version and the
             // Installed list on one screen.
             .listSectionSpacing(8)
+            if !DeviceWords.isMac {
             Section {
                 LabeledContent("Companion plugin", value: model.companionInstalledVersion.map { "v\($0)" } ?? "not installed")
                 LabeledContent("Ships with this build", value: "v\(PushSetupModel.bundledPluginVersion)")
@@ -1051,7 +1067,9 @@ struct AboutView: View {
             } header: { Text("Installed") } footer: {
                 Text("What Artha puts on your gateway and inside this app. Updates arrive under Software Update.")
             }
+            }
             Section {
+                if !DeviceWords.isMac {
                 Link(destination: URL(string: "mailto:\(Self.feedbackAddress)?subject=Vory%20feedback")!) { Label("Send feedback", systemImage: "envelope") }
                 // The address in plain sight, and a tap copies it: a tester with no mail account
                 // on the device could not find where "Send feedback" went.
@@ -1069,6 +1087,7 @@ struct AboutView: View {
                 Link(destination: URL(string: "https://vory.dev")!) { Label("vory.dev", systemImage: "safari") }
                     .accessibilityLabel("Artha website")
                     .accessibilityIdentifier("about.website")
+                }
                 // Vory is open source: the code anyone can read, and the licence it is under.
                 Link(destination: Self.sourceURL) {
                     LabeledContent { Text("MIT licence").foregroundStyle(.secondary) }
@@ -1080,7 +1099,7 @@ struct AboutView: View {
                 NavigationLink { AcknowledgementsView().pushedPage() } label: { Label("Acknowledgements", systemImage: "doc.text") }
                     .accessibilityIdentifier("about.acknowledgements")
             } header: { Text("Artha") } footer: {
-                Text("A public beta. In TestFlight, take a screenshot to send feedback with it attached.")
+                Text(DeviceWords.isMac ? "Built on Vory, under the MIT licence." : "A public beta. In TestFlight, take a screenshot to send feedback with it attached.")
             }
             Section {
                 Link("Hermes Agent documentation", destination: URL(string: "https://hermes-agent.nousresearch.com/docs")!)
