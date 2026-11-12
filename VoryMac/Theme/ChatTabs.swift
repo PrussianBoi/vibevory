@@ -128,8 +128,7 @@ struct TabStrip: View {
                     .help("New tab (⌘T)")
                     .keyboardShortcut("t", modifiers: .command)
                 }
-                .padding(.horizontal, 14)
-                .padding(.vertical, 6)
+                .padding(.horizontal, 4)
             }
         }
         .scrollClipDisabled()

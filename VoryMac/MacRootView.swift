@@ -665,22 +665,22 @@ private struct NavRow: View {
 /// The chats beside the sidebar: the tab strip on top and the open tab's chat below it.
 private struct ChatTabsArea: View {
     @Binding var path: NavigationPath
+    @Environment(\.macPageShown) private var pageShown
     @State private var tabs = ChatTabs.shared
 
     var body: some View {
-        // The tabs above the conversation, not over it: an open chat's transcript runs to the top
-        // of its own frame, and as an inset the tabs went under it.
-        VStack(spacing: 0) {
-            TabStrip().zIndex(1)
-                #if DEBUG
-                .onGeometryChange(for: CGRect.self) { $0.frame(in: .global) } action: { NSLog("[layout] tabs %@", NSStringFromRect($0)) }
-                #endif
-            // The transcript scrolls under the window's toolbar by design; here it stops at the tabs.
-            ChatDetailStack(path: $path) { StartPage(path: $path) }.clipped()
-                #if DEBUG
-                .onGeometryChange(for: CGRect.self) { $0.frame(in: .global) } action: { NSLog("[layout] chat stack %@", NSStringFromRect($0)) }
-                #endif
-        }
+        // The tabs in the title bar, as in Hermes Desktop. Not above the chat in its frame: the
+        // thread runs up under the window's toolbar (its glass), and over anything placed there.
+        ChatDetailStack(path: $path) { StartPage(path: $path) }
+            .toolbar {
+                if pageShown {
+                    ToolbarItem(placement: .navigation) {
+                        TabStrip().frame(minWidth: 120, idealWidth: 420, maxWidth: 560)
+                    }
+                    .sharedBackgroundVisibility(.hidden)
+                }
+            }
+            .toolbar(removing: .title)
             .onChange(of: tabs.selected) { _, _ in
                 path = tabs.current?.route?.path ?? NavigationPath()
             }

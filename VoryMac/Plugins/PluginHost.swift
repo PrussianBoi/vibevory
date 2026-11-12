@@ -155,6 +155,8 @@ final class PluginHost {
                 if !failed.isEmpty { problem = "Didn't load: " + failed.joined(separator: ", ") }
             }
             await refreshPages()
+            // A page chosen while the host was still starting.
+            if let selected { mount(selected) }
         } catch {
             problem = "Plugins didn't start: \(error.localizedDescription)"
         }
