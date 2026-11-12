@@ -10,6 +10,15 @@ struct VoryMacApp: App {
     @AppStorage("colorSchemePreference") private var scheme = "system"
 
     init() {
+        // Hermes Desktop's chat, by default: replies as a page (no bubble), finished work folded,
+        // one-line tool rows. Each stays a setting.
+        UserDefaults.standard.register(defaults: [
+            ChatStyle.bubbleStyle: "plain",
+            ChatStyle.collapseAfterTurn: true,
+            ChatStyle.compactTools: true,
+            ChatStyle.wideReplies: true,
+            "colorSchemePreference": "dark",
+        ])
         #if DEBUG
         // The demo copy (its own bundle id): credentials in memory, iCloud a dictionary.
         DemoMode.prepare()

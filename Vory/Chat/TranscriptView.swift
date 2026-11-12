@@ -1393,7 +1393,11 @@ enum ChatStyle {
     static let wideReplies = "chat.wideReplies"
     /// The reading column on a wide layout (the Mac, iPad, the open Duo): thread and composer
     /// share it, centred in the pane.
+    #if os(macOS)
+    static let readingColumn: CGFloat = 760   // Hermes Desktop's ~46rem column
+    #else
     static let readingColumn: CGFloat = 860
+    #endif
     /// The soft edge of the header's band on iOS: the page's background fades out over this
     /// much thread below the header. The thread's top margin clears it, so the first row reads
     /// whole, not through the fade. (The dock's band sits below the bar and has no fade above

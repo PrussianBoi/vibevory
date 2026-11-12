@@ -43,11 +43,19 @@ jobs:
         run: |
           mkdir -p shots
           defaults write -g AppleInterfaceStyle Dark
-          demo/Vory.app/Contents/MacOS/Vory -vory-demo-gateway http://127.0.0.1:9119 mock-token Home > app.log 2>&1 &
-          sleep 25
-          screencapture -x shots/01-launch.png
-          sleep 10
-          screencapture -x shots/02-later.png
+          APP=demo/Vory.app
+          shot() {  # name, extra args, wait
+            open -n "$APP" --args -vory-demo-gateway http://127.0.0.1:9119 mock-token Home $2
+            sleep "$3"
+            osascript -e 'tell application id "com.vorantx.vory.demo" to activate' || true
+            sleep 3
+            screencapture -x "shots/$1.png"
+            osascript -e 'tell application id "com.vorantx.vory.demo" to quit' || pkill -f "$APP" || true
+            sleep 3
+          }
+          shot 01-empty "" 20
+          shot 02-chat "-vibe-open-chat 20260921_154212_a1b2c3" 25
+          shot 03-chat-tools "-vibe-open-chat 20260921_093355_d4e5f6" 25
           ls -la shots
 
       - uses: actions/upload-artifact@v4

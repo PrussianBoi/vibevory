@@ -652,5 +652,14 @@ private struct ChatTabsArea: View {
             .onChange(of: tabs.selected) { _, _ in
                 path = tabs.current?.route?.path ?? NavigationPath()
             }
+            #if DEBUG
+            // `-vibe-open-chat <stored id>`: opens that chat a few seconds in (the CI screenshots).
+            .task {
+                let args = ProcessInfo.processInfo.arguments
+                guard let i = args.firstIndex(of: "-vibe-open-chat"), args.indices.contains(i + 1) else { return }
+                try? await Task.sleep(for: .seconds(4))
+                ChatNavigation.select(ChatRoute(storedID: args[i + 1]), in: &path)
+            }
+            #endif
     }
 }

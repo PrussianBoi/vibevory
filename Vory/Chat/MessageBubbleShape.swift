@@ -65,10 +65,12 @@ extension View {
             .contextMenu { menu() }
             .padding(edge, -MessageBubbleShape.tail)
         #else
+        // Liquid Glass over the window's sky: mine tinted with the accent, the bot's clear glass.
+        let glass: Glass = side == .trailing ? .regular.tint(Color.accentColor.opacity(0.42)) : .regular
         if wholeOnMac {
-            background(fill, in: MessageBubbleShape(side: side, tailed: tailed)).contentShape(.rect).contextMenu { menu() }
+            glassEffect(glass, in: MessageBubbleShape(side: side, tailed: tailed)).contentShape(.rect).contextMenu { menu() }
         } else {
-            background(fill, in: MessageBubbleShape(side: side, tailed: tailed)).contextMenu { menu() }
+            glassEffect(glass, in: MessageBubbleShape(side: side, tailed: tailed)).contextMenu { menu() }
         }
         #endif
     }
