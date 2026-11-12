@@ -103,7 +103,8 @@ struct CommandPalette: View {
             .padding(.horizontal, 16).padding(.vertical, 8)
         }
         .frame(width: 544)
-        .glassEffect(.regular, in: .rect(cornerRadius: 16))
+        .glassEffect(.clear.tint(.black.opacity(0.4)), in: .rect(cornerRadius: 16))
+        .overlay(RoundedRectangle(cornerRadius: 16, style: .continuous).strokeBorder(.white.opacity(0.16), lineWidth: 0.5).allowsHitTesting(false))
         .shadow(color: .black.opacity(0.45), radius: 40, y: 24)
     }
 

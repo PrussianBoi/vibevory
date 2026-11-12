@@ -88,7 +88,7 @@ extension View {
 
     /// The soft glass pill of the person's own message.
     func etherealPill(cornerRadius: CGFloat = 16) -> some View {
-        glassEffect(.regular, in: .rect(cornerRadius: cornerRadius))
+        glassEffect(.clear.tint(.white.opacity(0.04)), in: .rect(cornerRadius: cornerRadius))
             .overlay(RoundedRectangle(cornerRadius: cornerRadius, style: .continuous).strokeBorder(Ethereal.pillStroke, lineWidth: 0.5).allowsHitTesting(false))
     }
 

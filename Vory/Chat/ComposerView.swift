@@ -645,7 +645,7 @@ struct ComposerView: View {
         #if os(macOS)
         // VibeVory: a floating soft-glass capsule, a hairline inside it and a soft shadow under it.
         .padding(.leading, 15).padding(.trailing, 10).padding(.top, 11).padding(.bottom, 9)
-        .glassEffect(.regular.tint(dropTargeted ? Color.vory.opacity(0.35) : nil), in: .rect(cornerRadius: Self.cardRadius))
+        .glassEffect(.clear.tint(dropTargeted ? Color.vory.opacity(0.35) : Color.black.opacity(0.12)), in: .rect(cornerRadius: Self.cardRadius))
         .glassEffectID("dock", in: namespace)
         .overlay(RoundedRectangle(cornerRadius: Self.cardRadius, style: .continuous).strokeBorder(Ethereal.composerStroke, lineWidth: 0.5).allowsHitTesting(false))
         .shadow(color: .black.opacity(0.35), radius: 25, y: 18)
