@@ -671,8 +671,9 @@ private struct ChatTabsArea: View {
         // The tabs above the conversation, not over it: an open chat's transcript runs to the top
         // of its own frame, and as an inset the tabs went under it.
         VStack(spacing: 0) {
-            TabStrip()
-            ChatDetailStack(path: $path) { StartPage(path: $path) }
+            TabStrip().zIndex(1)
+            // The transcript scrolls under the window's toolbar by design; here it stops at the tabs.
+            ChatDetailStack(path: $path) { StartPage(path: $path) }.clipped()
         }
             .onChange(of: tabs.selected) { _, _ in
                 path = tabs.current?.route?.path ?? NavigationPath()
