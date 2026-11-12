@@ -31,7 +31,10 @@ jobs:
           test -d build/Build/Products/Debug/*.app
 
       - name: Demo copy
-        run: Tools/dev/make-demo-app.sh "$(ls -d build/Build/Products/Debug/*.app | head -1)" demo
+        run: |
+          SRC="$(ls -d build/Build/Products/Debug/*.app | head -1)"
+          mkdir -p "$SRC/Contents/Resources/PluginHost" && cp -R PluginHost/dist/. "$SRC/Contents/Resources/PluginHost/"
+          Tools/dev/make-demo-app.sh "$SRC" demo
 
       - name: Mock gateway
         run: |

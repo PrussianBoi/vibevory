@@ -1,0 +1,21 @@
+{
+  "name": "vibevory-pluginhost",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Standalone web bundle that runs Hermes Desktop disk plugins outside Electron (for WKWebView hosts).",
+  "type": "module",
+  "scripts": {
+    "build": "node build.mjs",
+    "test": "node test/run.mjs",
+    "test:mock": "node test/run.mjs --mock",
+    "test:bearer": "node test/run.mjs --bearer",
+    "test:all": "node test/run.mjs --mock && node test/run.mjs --bearer && node test/run.mjs",
+    "typecheck": "node ${HERMES_ROOT:-$HOME/.hermes/hermes-agent}/node_modules/typescript/bin/tsc -p tsconfig.json",
+    "build:lite": "node build.mjs --lite",
+    "test:lite": "node test/run.mjs --mock --lite"
+  },
+  "devDependencies": {
+    "playwright-core": "^1.62.1",
+    "ws": "^8.22.2"
+  }
+}

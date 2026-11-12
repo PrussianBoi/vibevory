@@ -1,0 +1,18 @@
+/* The Desktop's real stylesheet (Tailwind v4 + theme tokens + codicons + fonts). */
+@import '@desktop/styles.css';
+
+/* Tailwind scans the build root by default; point it at the Desktop source so every utility the
+   real components use is generated, plus the installed disk plugins (their own utility classes,
+   e.g. `rounded-[4px]`, only exist if something scanned them — rebuild after adding a plugin). */
+@source '@desktop-src-dir';
+@source '@desktop-plugins-dir';
+
+html,
+body,
+#root {
+  height: 100%;
+  margin: 0;
+  background: var(--background, #111);
+  color: var(--foreground, #eee);
+  overflow: hidden;
+}

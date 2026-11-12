@@ -1,0 +1,80 @@
+{
+  "compilerOptions": {
+    "target": "ES2023",
+    "lib": [
+      "DOM",
+      "DOM.Iterable",
+      "ES2023"
+    ],
+    "types": [
+      "node"
+    ],
+    "typeRoots": [
+      "/home/dev/.hermes/hermes-agent/node_modules/@types"
+    ],
+    "skipLibCheck": true,
+    "esModuleInterop": true,
+    "strict": true,
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "jsx": "react-jsx",
+    "noEmit": true,
+    "paths": {
+      "@/*": [
+        "/home/dev/.hermes/hermes-agent/apps/desktop/src/*"
+      ],
+      "@hermes/plugin-sdk": [
+        "/home/dev/.hermes/hermes-agent/apps/desktop/src/sdk/index.ts"
+      ],
+      "@hermes/shared/ansi": [
+        "/home/dev/.hermes/hermes-agent/apps/desktop/../shared/src/ansi.ts"
+      ],
+      "@hermes/shared/billing": [
+        "/home/dev/.hermes/hermes-agent/apps/desktop/../shared/src/billing-types.ts"
+      ],
+      "@hermes/shared/color": [
+        "/home/dev/.hermes/hermes-agent/apps/desktop/../shared/src/color.ts"
+      ],
+      "@hermes/shared/i18n": [
+        "/home/dev/.hermes/hermes-agent/apps/desktop/../shared/src/i18n.ts"
+      ],
+      "@hermes/shared/translucency": [
+        "/home/dev/.hermes/hermes-agent/apps/desktop/../shared/src/translucency.ts"
+      ],
+      "@hermes/shared": [
+        "/home/dev/.hermes/hermes-agent/apps/desktop/../shared/src/index.ts"
+      ],
+      "react": [
+        "/home/dev/.hermes/hermes-agent/node_modules/@types/react"
+      ],
+      "react-dom": [
+        "/home/dev/.hermes/hermes-agent/node_modules/@types/react-dom"
+      ],
+      "react-dom/client": [
+        "/home/dev/.hermes/hermes-agent/node_modules/@types/react-dom/client"
+      ],
+      "react/jsx-runtime": [
+        "/home/dev/.hermes/hermes-agent/node_modules/@types/react/jsx-runtime"
+      ],
+      "react-router": [
+        "/home/dev/.hermes/hermes-agent/node_modules/react-router/dist/development/index.d.ts"
+      ],
+      "@tanstack/react-query": [
+        "/home/dev/.hermes/hermes-agent/node_modules/@tanstack/react-query"
+      ],
+      "nanostores": [
+        "/home/dev/.hermes/hermes-agent/node_modules/nanostores"
+      ],
+      "@nanostores/react": [
+        "/home/dev/.hermes/hermes-agent/node_modules/@nanostores/react"
+      ]
+    }
+  },
+  "files": [
+    "src/host.tsx",
+    "/home/dev/.hermes/hermes-agent/apps/desktop/src/global.d.ts",
+    "/home/dev/.hermes/hermes-agent/apps/desktop/src/vite-env.d.ts"
+  ]
+}

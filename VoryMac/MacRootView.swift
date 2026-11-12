@@ -152,6 +152,8 @@ private struct MainSplitView: View {
     /// The window's own liveness (visible and in front), to combine with the page's.
     @Environment(\.botsLive) private var windowLive
 
+    @State private var plugins = PluginHost.shared
+
     var body: some View {
         let chats = model.selectedTab == .chats
         // Hermes Desktop's layout, in SwiftUI: one sidebar (the pages, then the chats) and, beside
@@ -161,6 +163,7 @@ private struct MainSplitView: View {
             DesktopSidebar(tabs: tabs, chatPath: $chatPath)
         } detail: {
             ZStack {
+              ZStack {
                 ChatTabsArea(path: $chatPath)
                     // A renamed bot's open chat is stale (#315): back to the placeholder.
                     .onReceive(NotificationCenter.default.publisher(for: .hermesBotRenamed)) { _ in chatPath = NavigationPath() }
@@ -170,7 +173,14 @@ private struct MainSplitView: View {
                         .id(resets[tab, default: 0])
                         .modifier(MacPage(shown: model.selectedTab == tab, windowLive: windowLive))
                 }
+              }
+              // A plugin page in front hides the rest (the page is smoke over the aurora, not paint).
+              .opacity(plugins.selected == nil ? 1 : 0)
+              .allowsHitTesting(plugins.selected == nil)
+              PluginPageArea()
             }
+            .animation(.smooth(duration: 0.2), value: plugins.selected)
+            .task(id: model.runtime?.connection.id) { plugins.attach(model.runtime) }
         }
         // Room for the rail, the list and a reading column with a table in it: narrower than this
         // the bubbles squeezed to a few words a line.
@@ -571,7 +581,10 @@ private struct DesktopSidebar: View {
             .safeAreaInset(edge: .bottom, spacing: 0) { GatewayFooter() }
             .toolbar(removing: .sidebarToggle)
             // A chat picked in the list brings the chats back in front of any page.
-            .onChange(of: chatPath) { _, _ in if model.selectedTab != .chats { model.selectedTab = .chats } }
+            .onChange(of: chatPath) { _, _ in
+                PluginHost.shared.selected = nil
+                if model.selectedTab != .chats { model.selectedTab = .chats }
+            }
             .navigationSplitViewColumnWidth(min: 250, ideal: 290, max: 380)
     }
 }
@@ -579,6 +592,7 @@ private struct DesktopSidebar: View {
 /// New chat and the pages, as rows.
 private struct PageNav: View {
     @Environment(AppModel.self) private var model
+    @State private var plugins = PluginHost.shared
     var tabs: [AppModel.AppTab]
 
     var body: some View {
@@ -586,14 +600,21 @@ private struct PageNav: View {
             NavRow(symbol: "square.and.pencil", title: "New chat", selected: false, shortcut: nil) {
                 // A fresh tab, and the same new chat ⌘N makes, opened in it.
                 ChatTabs.shared.newTab()
+                plugins.selected = nil
                 model.selectedTab = .chats
                 model.newChatRequest = UUID()
             }
             ForEach(Array(tabs.filter { $0 != .chats && $0 != .dashboard }.enumerated()), id: \.element) { i, tab in
-                NavRow(symbol: tab.symbol, title: tab.title, selected: model.selectedTab == tab,
+                NavRow(symbol: tab.symbol, title: tab.title, selected: model.selectedTab == tab && plugins.selected == nil,
                        badge: tab == .approvals ? (model.runtime?.needsAttention.count ?? 0) : 0,
                        shortcut: i < 9 ? Character("\(i + 1)") : nil) {
+                    plugins.selected = nil
                     if model.selectedTab == tab { model.tabReselected[tab, default: 0] += 1 } else { model.selectedTab = tab }
+                }
+            }
+            PluginNavSection { page, selected in
+                NavRow(symbol: page.symbol, title: page.title, selected: selected, shortcut: nil) {
+                    plugins.open(page)
                 }
             }
         }
