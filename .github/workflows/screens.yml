@@ -14,7 +14,7 @@ concurrency:
 jobs:
   screens:
     runs-on: xcode-27
-    timeout-minutes: 60
+    timeout-minutes: 35
     steps:
       - uses: actions/checkout@v4
 
@@ -64,24 +64,26 @@ jobs:
           defaults write com.vorantx.vory.demo companionPromptShown -bool true
           APP=demo/Vory.app
           BIN="$APP/Contents/MacOS/$(defaults read "$PWD/$APP/Contents/Info" CFBundleExecutable)"
+          # Any step that talks to the app gives up after 25 s: a frozen app used to stall the whole run.
+          t() { perl -e 'alarm shift; exec @ARGV' 25 "$@"; }
           shot() {  # name, extra args, wait
             "$BIN" -vory-demo-gateway http://127.0.0.1:9119 mock-token Home $2 >> app.log 2>&1 &
             PID=$!
             sleep "$3"
-            osascript -e 'tell application id "com.vorantx.vory.demo" to activate' || true
+            t osascript -e 'tell application id "com.vorantx.vory.demo" to activate' || true
             sleep 2
             # No window yet: ask for it from the Window menu, as a person would.
-            osascript -e 'tell application "System Events" to tell (first process whose bundle identifier is "com.vorantx.vory.demo") to click (first menu item of menu "Window" of menu bar 1 whose name starts with "Hermes")' >> app.log 2>&1 || true
+            t osascript -e 'tell application "System Events" to tell (first process whose bundle identifier is "com.vorantx.vory.demo") to click (first menu item of menu "Window" of menu bar 1 whose name starts with "Hermes")' >> app.log 2>&1 || true
             sleep 4
             # Fill the screen, as the app would sit on a MacBook Air.
-            osascript -e 'tell application "Finder" to set b to bounds of window of desktop' -e 'tell application "System Events" to tell (first process whose bundle identifier is "com.vorantx.vory.demo") to tell window 1 to set {position, size} to {{0, 30}, {(item 3 of b), (item 4 of b) - 30}}' >> app.log 2>&1 || true
+            t osascript -e 'tell application "Finder" to set b to bounds of window of desktop' -e 'tell application "System Events" to tell (first process whose bundle identifier is "com.vorantx.vory.demo") to tell window 1 to set {position, size} to {{0, 30}, {(item 3 of b), (item 4 of b) - 30}}' >> app.log 2>&1 || true
             sleep 3
             echo "== $1: windows" >> app.log
-            python3 -c 'import Quartz;[print(w.get("kCGWindowOwnerName"),w.get("kCGWindowName"),dict(w.get("kCGWindowBounds")),w.get("kCGWindowLayer")) for w in Quartz.CGWindowListCopyWindowInfo(0,0)]' >> app.log 2>&1 || true
-            screencapture -x "shots/$1.png"
+            t python3 -c 'import Quartz;[print(w.get("kCGWindowOwnerName"),w.get("kCGWindowName"),dict(w.get("kCGWindowBounds")),w.get("kCGWindowLayer")) for w in Quartz.CGWindowListCopyWindowInfo(0,0)]' >> app.log 2>&1 || true
+            t screencapture -x "shots/$1.png"
             sample $PID 2 -file "crash/sample-$1.txt" >/dev/null 2>&1 || true
-            log show --last 1m --predicate "processID == $PID AND eventMessage CONTAINS '[plugins]' OR eventMessage CONTAINS '[layout]'" --style compact > "crash/our-$1.txt" 2>&1 || true
-            log show --last 1m --style compact --predicate "processID == $PID" > "crash/log-$1.txt" 2>&1 || true
+            t log show --last 1m --predicate "processID == $PID AND eventMessage CONTAINS '[plugins]' OR eventMessage CONTAINS '[layout]'" --style compact > "crash/our-$1.txt" 2>&1 || true
+            t log show --last 1m --style compact --predicate "processID == $PID" > "crash/log-$1.txt" 2>&1 || true
             kill $PID 2>/dev/null || true
             sleep 3
           }
