@@ -935,7 +935,11 @@ struct PluginDialog: View {
             }
     }
 
-    @ViewBuilder func part(_ k: PluginNode) -> some View {
+    func part(_ k: PluginNode) -> AnyView {
+        AnyView(partBody(k))
+    }
+
+    @ViewBuilder func partBody(_ k: PluginNode) -> some View {
         switch k.type {
         case "DialogHeader":
             VStack(alignment: .leading, spacing: 4) { ForEach(PluginDraw.visible(k.children)) { part($0) } }
