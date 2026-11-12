@@ -16,7 +16,7 @@ struct AuroraBackground: View {
                 let t = Float(context.date.timeIntervalSince(Self.start)) + 40   // start mid-display, not at dark
                 Rectangle()
                     .frame(width: size.width, height: size.height)
-                    .colorEffect(ShaderLibrary.auroraSky(.float2(size), .float(Float(displayScale * downscale)), .float(t)))
+                    .colorEffect(ShaderLibrary.auroraMist(.float2(size), .float(Float(displayScale * downscale)), .float(t)))
                     .scaleEffect(downscale, anchor: .topLeading)
                     .frame(width: geo.size.width, height: geo.size.height, alignment: .topLeading)
             }

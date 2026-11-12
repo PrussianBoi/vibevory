@@ -153,35 +153,113 @@ private struct MainSplitView: View {
     @Environment(\.botsLive) private var windowLive
 
     @State private var plugins = PluginHost.shared
+    @State private var desk = DesktopPages.shared
+    @State private var chrome = SidebarChrome.shared
+
+    private var chatsInFront: Bool { model.selectedTab == .chats && plugins.selected == nil && desk.selected == nil }
+
+    private var detail: some View {
+        let chats = model.selectedTab == .chats
+        return ZStack {
+          ZStack {
+            ChatTabsArea(path: $chatPath)
+                // A renamed bot's open chat is stale (#315): back to the placeholder.
+                .onReceive(NotificationCenter.default.publisher(for: .hermesBotRenamed)) { _ in chatPath = NavigationPath() }
+                .modifier(MacPage(shown: chats && plugins.selected == nil && desk.selected == nil, windowLive: windowLive))
+            ForEach(keptPages, id: \.self) { tab in
+                page(tab)
+                    .id(resets[tab, default: 0])
+                    .modifier(MacPage(shown: model.selectedTab == tab && plugins.selected == nil && desk.selected == nil, windowLive: windowLive))
+            }
+          }
+          // A plugin or Desktop page in front hides the rest (the page is smoke over the aurora, not paint).
+          .opacity(plugins.selected == nil && desk.selected == nil ? 1 : 0)
+          .allowsHitTesting(plugins.selected == nil && desk.selected == nil)
+          PluginPageArea()
+          DesktopPageArea()
+        }
+        .animation(.smooth(duration: 0.2), value: plugins.selected)
+        .animation(.smooth(duration: 0.2), value: desk.selected)
+        .task(id: model.runtime?.connection.id) { plugins.attach(model.runtime) }
+    }
 
     var body: some View {
-        let chats = model.selectedTab == .chats
         // Hermes Desktop's layout, in SwiftUI: one sidebar (the pages, then the chats) and, beside
         // it, the chat tabs or the page chosen. The pages stay mounted once visited, so a switch
         // is an opacity change (see `MacPage`).
-        NavigationSplitView(columnVisibility: $columns) {
-            DesktopSidebar(tabs: tabs, chatPath: $chatPath)
-        } detail: {
-            ZStack {
-              ZStack {
-                ChatTabsArea(path: $chatPath)
-                    // A renamed bot's open chat is stale (#315): back to the placeholder.
-                    .onReceive(NotificationCenter.default.publisher(for: .hermesBotRenamed)) { _ in chatPath = NavigationPath() }
-                    .modifier(MacPage(shown: chats, windowLive: windowLive))
-                ForEach(keptPages, id: \.self) { tab in
-                    page(tab)
-                        .id(resets[tab, default: 0])
-                        .modifier(MacPage(shown: model.selectedTab == tab, windowLive: windowLive))
-                }
-              }
-              // A plugin page in front hides the rest (the page is smoke over the aurora, not paint).
-              .opacity(plugins.selected == nil ? 1 : 0)
-              .allowsHitTesting(plugins.selected == nil)
-              PluginPageArea()
+        // Hermes Desktop's layout, in SwiftUI: the sidebar pinned beside the chats, or hidden and
+        // sliding in as floating Liquid Glass from the window's left edge (⌘B switches); beside
+        // it, the chat tabs or the page chosen. The pages stay mounted once visited, so a switch
+        // is an opacity change (see `MacPage`).
+        HStack(spacing: 0) {
+            if chrome.pinned {
+                HermesSidebar(tabs: tabs, chatPath: $chatPath)
+                    .frame(width: SidebarChrome.width)
+                    .background(Color(red: 0.06, green: 0.07, blue: 0.13).opacity(0.32))
+                    .overlay(alignment: .trailing) { Rectangle().fill(.white.opacity(0.07)).frame(width: 0.5) }
+                    .ignoresSafeArea(.container, edges: .top)
+                    .transition(.move(edge: .leading).combined(with: .opacity))
             }
-            .animation(.smooth(duration: 0.2), value: plugins.selected)
-            .task(id: model.runtime?.connection.id) { plugins.attach(model.runtime) }
+            detail
         }
+        .overlay(alignment: .topLeading) {
+            if !chrome.pinned {
+                ZStack(alignment: .topLeading) {
+                    // The left edge: the pointer arriving here slides the sidebar in.
+                    Color.clear.frame(width: 8).frame(maxHeight: .infinity).contentShape(.rect)
+                        .onHover { if $0 { chrome.reveal() } }
+                    if chrome.revealed {
+                        HermesSidebar(tabs: tabs, chatPath: $chatPath, floating: true)
+                            .frame(width: SidebarChrome.width)
+                            .frame(maxHeight: .infinity)
+                            .glassEffect(.regular, in: .rect(cornerRadius: 18))
+                            .shadow(color: .black.opacity(0.4), radius: 30, y: 18)
+                            .padding(8)
+                            .onHover { inside in if inside { chrome.reveal() } else { chrome.leave() } }
+                            .transition(.move(edge: .leading).combined(with: .opacity))
+                    }
+                }
+                .ignoresSafeArea(.container, edges: .top)
+            }
+        }
+        // ⌘K over everything, as in Desktop.
+        .overlay { CommandPalette(chatPath: $chatPath, tabs: tabs) }
+        .background {
+            // Vory's chat list, out of sight: it still answers ⌘N and voice requests and opens what
+            // they ask for (the sidebar above is Desktop's, drawn apart from it).
+            ChatListView(detailPath: $chatPath)
+                .environment(\.macPageShown, false)
+                .frame(width: 1, height: 1)
+                .opacity(0)
+                .allowsHitTesting(false)
+                .accessibilityHidden(true)
+            HStack {
+                Button("") { CommandPaletteState.shared.toggle() }.keyboardShortcut("k", modifiers: .command)
+                Button("") { CommandPaletteState.shared.toggle() }.keyboardShortcut("p", modifiers: .command)
+            }
+            .opacity(0).accessibilityHidden(true)
+        }
+        // The title bar's buttons on every page but the chats (whose own toolbar has them with the tabs).
+        .toolbar {
+            if !chatsInFront {
+                ToolbarItem(placement: .navigation) { TitleBarLeading() }.sharedBackgroundVisibility(.hidden)
+                ToolbarItem(placement: .primaryAction) { TitleBarTrailing() }.sharedBackgroundVisibility(.hidden)
+            }
+        }
+        .toolbar(removing: .title)
+        .toolbarBackgroundVisibility(.hidden, for: .windowToolbar)
+        .animation(.smooth(duration: 0.3), value: chrome.pinned)
+        #if DEBUG
+        // CI screenshots: `-vibe-sidebar hidden|reveal`, `-vibe-open-palette`.
+        .task {
+            let args = ProcessInfo.processInfo.arguments
+            if let i = args.firstIndex(of: "-vibe-sidebar"), args.indices.contains(i + 1) {
+                chrome.pinned = false
+                if args[i + 1] == "reveal" { try? await Task.sleep(for: .seconds(5)); chrome.reveal() }
+            }
+            if args.contains("-vibe-open-palette") { try? await Task.sleep(for: .seconds(6)); CommandPaletteState.shared.toggle() }
+        }
+        #endif
         // Room for the rail, the list and a reading column with a table in it: narrower than this
         // the bubbles squeezed to a few words a line.
         .frame(minWidth: 860, minHeight: 520)
@@ -211,7 +289,13 @@ private struct MainSplitView: View {
                 Task { @MainActor in focus.back(now, in: w) }
             }
         }
-        .onChange(of: chatPath) { _, _ in Smooth.animate("chatOpen") }
+        .onChange(of: chatPath) { _, _ in
+            Smooth.animate("chatOpen")
+            // A chat opened (the sidebar, ⌘N, a notification) brings the chats back in front.
+            plugins.selected = nil
+            desk.selected = nil
+            if model.selectedTab != .chats { model.selectedTab = .chats }
+        }
         .onChange(of: tabs) { _, now in
             kept.removeAll { !now.contains($0) }
             openOnLaunchTab(now)
@@ -688,49 +772,47 @@ private struct ChatTabsArea: View {
     }
 }
 
-/// An empty tab, as Hermes Desktop has it: the wordmark, a line on what to ask, and the chats
-/// to pick back up as glass cards. The composer comes with the new chat (⌘N, or a card).
+/// An empty tab: a quiet greeting, a few things to ask, and the composer in the middle. Typing
+/// there (or a suggestion) starts the chat with that message.
 private struct StartPage: View {
     @Environment(AppModel.self) private var model
     @Environment(\.macPageShown) private var shown
     @Binding var path: NavigationPath
-    @State private var recent: [StoredSession] = []
+    @State private var text = ""
+    @FocusState private var focused: Bool
+
+    private static let suggestions = ["Check my inbox", "Summarize yesterday", "Plan today"]
+
+    private var greeting: String {
+        let h = Calendar.current.component(.hour, from: Date())
+        return h < 5 ? "Good night" : h < 12 ? "Good morning" : h < 18 ? "Good afternoon" : "Good evening"
+    }
 
     var body: some View {
-        VStack(spacing: 22) {
+        VStack(spacing: 8) {
             Spacer(minLength: 40)
-            Text("HERMES")
-                .font(.system(size: 92, weight: .heavy, design: .serif))
-                .tracking(10)
-                .foregroundStyle(.white.opacity(0.94))
-                .shadow(color: .black.opacity(0.25), radius: 18, y: 6)
+            Text(greeting)
+                .font(.system(size: 22, weight: .light))
+                .foregroundStyle(.white.opacity(0.9))
+                .shadow(color: Color(red: 0.78, green: 0.82, blue: 1).opacity(0.25), radius: 12)
                 .accessibilityAddTraits(.isHeader)
-            Text("Drop a file path, a traceback, or a rough idea.")
-                .font(.system(size: 15))
-                .foregroundStyle(.white.opacity(0.72))
-            Button {
-                model.newChatRequest = UUID()
-            } label: {
-                Label("New chat", systemImage: "square.and.pencil").padding(.horizontal, 6)
-            }
-            .buttonStyle(.glass)
-            .controlSize(.large)
-            .keyboardShortcut(.return, modifiers: .command)
-            if !recent.isEmpty {
-                VStack(alignment: .leading, spacing: 10) {
-                    Text("PICK UP WHERE YOU LEFT OFF")
-                        .font(.system(size: 11, weight: .semibold)).tracking(2)
-                        .foregroundStyle(.white.opacity(0.6))
-                    GlassEffectContainer(spacing: 12) {
-                        HStack(spacing: 12) {
-                            ForEach(recent.prefix(3)) { s in card(s) }
-                        }
+            Text("What should Hermes work on?")
+                .font(.system(size: 12))
+                .foregroundStyle(.white.opacity(0.4))
+            HStack(spacing: 7) {
+                ForEach(Self.suggestions, id: \.self) { s in
+                    Button { text = s; focused = true } label: {
+                        Text(s).font(.system(size: 11.5)).foregroundStyle(.white.opacity(0.58))
+                            .padding(.horizontal, 12).frame(height: 26)
+                            .background(.white.opacity(0.05), in: .capsule)
+                            .overlay(Capsule().strokeBorder(.white.opacity(0.08), lineWidth: 0.5))
                     }
+                    .buttonStyle(.plain)
                 }
-                .frame(maxWidth: 760)
-                .padding(.top, 26)
             }
-            Spacer(minLength: 60)
+            .padding(.top, 14)
+            composer.padding(.top, 34)
+            Spacer(minLength: 80)
         }
         .padding(.horizontal, 32)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -741,41 +823,45 @@ private struct StartPage: View {
             }
         }
         .toolbarBackgroundVisibility(.hidden, for: .windowToolbar)
-        .task(id: model.runtime?.connection.id) { await load() }
+        .onAppear { focused = true }
     }
 
-    private func card(_ s: StoredSession) -> some View {
-        Button {
-            ChatNavigation.select(ChatRoute(storedID: s.id, title: s.title, profile: s.profile), in: &path)
-        } label: {
-            VStack(alignment: .leading, spacing: 6) {
-                Text(s.title?.isEmpty == false ? s.title! : (s.preview ?? "Untitled chat"))
-                    .font(.system(size: 15, weight: .semibold))
-                    .lineLimit(2)
-                    .multilineTextAlignment(.leading)
-                Text(ago(s.lastActive ?? s.startedAt))
-                    .font(.system(size: 12.5))
-                    .foregroundStyle(.secondary)
+    private var composer: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            TextField("Ask Hermes anything…", text: $text, axis: .vertical)
+                .textFieldStyle(.plain)
+                .font(.system(size: 12.5))
+                .lineLimit(1...6)
+                .focused($focused)
+                .onSubmit(send)
+            HStack(spacing: 6) {
+                Text(model.runtime?.profiles.first { $0.name == (model.runtime?.selectedProfile ?? "default") }?.model ?? "Hermes")
+                    .font(.system(size: 11)).foregroundStyle(.white.opacity(0.58)).lineLimit(1)
+                    .padding(.horizontal, 9).frame(height: 22)
+                    .background(.white.opacity(0.06), in: .capsule)
+                Spacer()
+                Button(action: send) {
+                    Image(systemName: "arrow.up").font(.system(size: 11, weight: .bold))
+                        .foregroundStyle(Color(red: 0.08, green: 0.08, blue: 0.16))
+                        .frame(width: 24, height: 24)
+                        .background(.white.opacity(text.isEmpty ? 0.35 : 0.85), in: .circle)
+                }
+                .buttonStyle(.plain)
+                .disabled(text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                .keyboardShortcut(.return, modifiers: .command)
             }
-            .frame(maxWidth: .infinity, minHeight: 64, alignment: .topLeading)
-            .padding(16)
-            .contentShape(.rect(cornerRadius: 18))
         }
-        .buttonStyle(.plain)
-        .glassEffect(.regular.interactive(), in: .rect(cornerRadius: 18))
+        .padding(.leading, 15).padding(.trailing, 10).padding(.top, 12).padding(.bottom, 9)
+        .frame(maxWidth: 620)
+        .glassEffect(.regular, in: .rect(cornerRadius: 20))
+        .shadow(color: .black.opacity(0.35), radius: 25, y: 18)
     }
 
-    private func ago(_ t: Double?) -> String {
-        guard let t else { return "" }
-        let d = Date(timeIntervalSince1970: t)
-        return "Left off " + d.formatted(.relative(presentation: .named))
-    }
-
-    private func load() async {
-        guard let runtime = model.runtime else { recent = []; return }
-        let q = [URLQueryItem(name: "order", value: "recent"), URLQueryItem(name: "limit", value: "6")]
-        if let r: SessionListResponse = try? await runtime.api.get("/api/sessions", query: q, profile: runtime.selectedProfile) {
-            recent = r.sessions.filter { $0.source != "cron" && $0.archived != true }
-        }
+    private func send() {
+        let t = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !t.isEmpty else { return }
+        text = ""
+        let profile = model.runtime?.selectedProfile
+        ChatNavigation.select(ChatRoute(storedID: nil, title: nil, profile: profile, initialText: t), in: &path)
     }
 }

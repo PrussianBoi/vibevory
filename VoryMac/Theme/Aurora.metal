@@ -148,3 +148,43 @@ using namespace aurora;
     float dither = (hash(1.7 * pixel * scale + 31.0) - 0.5) * 1.6 / 255.0;
     return half4(half3(c + dither), 1.0h);
 }
+
+inline float3 mistVeil(float2 p, float t, float2 at, float2 r, float3 tint, float k) {
+    float2 d = (p - at - 0.05 * float2(sin(0.010 * t + k), cos(0.008 * t + 2.0 * k))) / r;
+    return tint * exp(-dot(d, d));
+}
+
+/// The ethereal sky (VibeVory's design): no curtains or land, the aurora as soft veils of mist
+/// drifting over a dim night, with cloud texture and a little grain. Same arguments as auroraSky.
+[[ stitchable ]] half4 auroraMist(float2 position, half4 color, float2 size, float scale, float t) {
+    float2 res = size;
+    float2 pixel = float2(position.x, size.y - position.y);   // y up
+    float2 uv = pixel / res;
+    float W = res.x / res.y;
+    float2 p = float2(uv.x * W, uv.y);
+
+    // dim night: a little lighter overhead
+    float3 c = mix(float3(0.051, 0.055, 0.110), float3(0.078, 0.102, 0.172), smoothstep(0.0, 1.0, uv.y));
+
+    // slow domain-warped clouds, so the veils have texture instead of being flat glows
+    float s = 0.012 * t;
+    float2 q = float2(field(1.1 * p + float2(s, 0.3)), field(1.1 * p + float2(5.2, -0.8 * s)));
+    float cloud = field(1.7 * p + 1.6 * q + float2(0.6 * s, -0.3 * s));
+    float wisps = smoothstep(0.25, 0.85, cloud);
+
+    // the veils: where each colour sits, drifting a little
+    float3 acc = float3(0);
+    acc += mistVeil(p, t, float2(0.35 * W, 1.02), float2(0.55 * W, 0.30), float3(0.43, 0.90, 0.78), 0.0) * 0.55;  // teal
+    acc += mistVeil(p, t, float2(0.78 * W, 1.05), float2(0.42 * W, 0.34), float3(0.59, 0.47, 1.00), 1.0) * 0.55;  // violet
+    acc += mistVeil(p, t, float2(0.45 * W, 0.55), float2(0.50 * W, 0.30), float3(0.47, 0.59, 1.00), 2.0) * 0.22;  // blue
+    acc += mistVeil(p, t, float2(0.80 * W, 0.20), float2(0.35 * W, 0.25), float3(0.94, 0.59, 0.75), 3.0) * 0.22;  // rose
+    acc += mistVeil(p, t, float2(0.05 * W, 0.18), float2(0.30 * W, 0.22), float3(0.35, 0.78, 0.82), 4.0) * 0.16;  // cyan
+    acc *= 0.45 + 0.85 * wisps;
+    // a slow breath across the whole sky
+    acc *= 0.85 + 0.15 * sin(0.03 * t);
+
+    c = 1.0 - (1.0 - c) * (1.0 - 0.55 * acc);   // screen
+    c += 0.025 * (cloud - 0.5) * float3(0.85, 0.88, 1.0);
+    float grain = (hash(1.7 * pixel * scale + floor(t * 12.0)) - 0.5) * 5.0 / 255.0;
+    return half4(half3(c + grain), 1.0h);
+}

@@ -104,11 +104,9 @@ final class ChatTabs {
 /// The tabs as Liquid Glass pills, with + at the end.
 struct TabStrip: View {
     @State private var model = ChatTabs.shared
-    @Namespace private var glass
 
     var body: some View {
         ScrollView(.horizontal, showsIndicators: false) {
-            GlassEffectContainer(spacing: 8) {
                 HStack(spacing: 6) {
                     ForEach(model.tabs) { tab in
                         TabPill(tab: tab, selected: tab.id == model.selected, closable: model.tabs.count > 1 || tab.route != nil) {
@@ -116,20 +114,17 @@ struct TabStrip: View {
                         } close: {
                             withAnimation(.smooth(duration: 0.22)) { model.close(tab.id) }
                         }
-                        .glassEffectID(tab.id, in: glass)
                     }
                     Button {
                         withAnimation(.smooth(duration: 0.22)) { model.newTab() }
                     } label: {
-                        Image(systemName: "plus").font(.system(size: 12, weight: .semibold)).frame(width: 28, height: 28)
+                        Image(systemName: "plus").font(.system(size: 11)).foregroundStyle(.white.opacity(0.4)).frame(width: 24, height: 24).contentShape(.circle)
                     }
                     .buttonStyle(.plain)
-                    .glassEffect(.regular.interactive(), in: .circle)
                     .help("New tab (⌘T)")
                     .keyboardShortcut("t", modifiers: .command)
                 }
                 .padding(.horizontal, 4)
-            }
         }
         .scrollClipDisabled()
         .background(alignment: .center) {
@@ -153,9 +148,9 @@ private struct TabPill: View {
 
     var body: some View {
         HStack(spacing: 6) {
-            Circle().fill(selected ? Color.accentColor : Color.secondary.opacity(0.5)).frame(width: 6, height: 6)
-            Text(tab.title)
-                .font(.system(size: 12.5, weight: selected ? .semibold : .regular))
+                        Text(tab.title)
+                .font(.system(size: 11.5))
+                .foregroundStyle(.white.opacity(selected ? 0.9 : 0.4))
                 .lineLimit(1)
                 .frame(maxWidth: 200, alignment: .leading)
             if closable {
@@ -170,11 +165,11 @@ private struct TabPill: View {
         }
         .padding(.leading, 12)
         .padding(.trailing, closable ? 6 : 12)
-        .frame(height: 28)
+        .frame(height: 24)
         .contentShape(.capsule)
         .onTapGesture(perform: select)
         .onHover { hovering = $0 }
-        .glassEffect(selected ? .regular.tint(Color.accentColor.opacity(0.22)).interactive() : .regular.interactive(), in: .capsule)
+        .background { if selected { Capsule().fill(.white.opacity(0.08)).overlay(Capsule().strokeBorder(.white.opacity(0.12), lineWidth: 0.5)) } else if hovering { Capsule().fill(.white.opacity(0.04)) } }
         .accessibilityElement(children: .combine)
         .accessibilityAddTraits(selected ? [.isButton, .isSelected] : .isButton)
     }
@@ -190,11 +185,76 @@ struct ChatTabsChrome: ViewModifier {
             .toolbar {
                 if pageShown {
                     ToolbarItem(placement: .navigation) {
-                        TabStrip().frame(minWidth: 120, idealWidth: 420, maxWidth: 560)
+                        HStack(spacing: 0) {
+                            TitleBarLeading()
+                            TabStrip().frame(minWidth: 120, idealWidth: 420, maxWidth: 560)
+                        }
                     }
                     .sharedBackgroundVisibility(.hidden)
+                    ToolbarItem(placement: .primaryAction) { TitleBarTrailing() }
+                        .sharedBackgroundVisibility(.hidden)
                 }
             }
             .toolbar(removing: .title)
+    }
+}
+
+/// By the window controls, as in Desktop: the sidebar button (⌘B), then room for the pinned
+/// sidebar so what follows starts over the detail column.
+struct TitleBarLeading: View {
+    @State private var chrome = SidebarChrome.shared
+
+    var body: some View {
+        HStack(spacing: 0) {
+            TitleBarButton(symbol: "sidebar.left", help: chrome.pinned ? "Hide sidebar (⌘B)" : "Pin sidebar (⌘B)") { chrome.toggle() }
+                .keyboardShortcut("b", modifiers: .command)
+            // The traffic lights end near 78 pt; the toolbar item starts just after them.
+            Color.clear.frame(width: chrome.pinned ? max(0, SidebarChrome.width - 78 - 30 - 6) : 6, height: 1)
+        }
+    }
+}
+
+/// The top right, as in Desktop: Settings (⌘,) and the layout menu.
+struct TitleBarTrailing: View {
+    @Environment(AppModel.self) private var model
+    @State private var chrome = SidebarChrome.shared
+
+    var body: some View {
+        HStack(spacing: 2) {
+            TitleBarButton(symbol: "gearshape", help: "Open settings (⌘,)") { HermesActions.settings(model) }
+            Menu {
+                Toggle("Pin sidebar", isOn: Binding(get: { chrome.pinned }, set: { _ in chrome.toggle() }))
+                Button("Command palette…") { CommandPaletteState.shared.toggle() }
+            } label: {
+                Image(systemName: "rectangle.split.2x1").font(.system(size: 13)).foregroundStyle(.white.opacity(0.58))
+                    .frame(width: 28, height: 24).contentShape(.rect)
+            }
+            .menuStyle(.button)
+            .buttonStyle(.plain)
+            .menuIndicator(.hidden)
+            .fixedSize()
+            .help("Layout")
+        }
+    }
+}
+
+struct TitleBarButton: View {
+    var symbol: String
+    var help: String
+    var action: () -> Void
+    @State private var hovering = false
+
+    var body: some View {
+        Button(action: action) {
+            Image(systemName: symbol).font(.system(size: 13))
+                .foregroundStyle(.white.opacity(hovering ? 0.85 : 0.58))
+                .frame(width: 28, height: 24)
+                .background(.white.opacity(hovering ? 0.07 : 0), in: .rect(cornerRadius: 7))
+                .contentShape(.rect)
+        }
+        .buttonStyle(.plain)
+        .onHover { hovering = $0 }
+        .help(help)
+        .accessibilityLabel(help)
     }
 }

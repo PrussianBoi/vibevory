@@ -72,9 +72,9 @@ jobs:
           shot 02-chat "-vibe-open-chat 20260921_154212_a1b2c3" 25
           shot 03-chat-tools "-vibe-open-chat 20260921_093355_d4e5f6" 25
           shot 04-plugin "-vibe-open-plugin /hello" 25
-          # Control: does any WebKit page show in this runner's screenshots?
-          printf '<html><body style="background:#123;color:#fff;font:40px sans-serif">WebKit control page</body></html>' > /tmp/control.html
-          open -a Safari /tmp/control.html; sleep 8; screencapture -x shots/06-safari-control.png; osascript -e 'quit app "Safari"' || true
+          shot 05-sidebar-hidden "-vibe-sidebar hidden -vibe-open-chat 20260921_093355_d4e5f6" 25
+          shot 06-sidebar-reveal "-vibe-sidebar reveal -vibe-open-chat 20260921_093355_d4e5f6" 25
+          shot 07-palette "-vibe-open-palette" 25
           ls -la shots
           mkdir -p crash; cp ~/Library/Logs/DiagnosticReports/*.ips crash/ 2>/dev/null || true
           find "$TMPDIR" /var/folders -name vibe-plugin-snapshot.png -exec cp {} shots/ \; 2>/dev/null || true
