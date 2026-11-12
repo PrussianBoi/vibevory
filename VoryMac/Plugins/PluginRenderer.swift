@@ -544,7 +544,10 @@ enum PluginDraw {
         let parts: [(Double, Color)] = kids.compactMap { k in
             guard let style = k.props["style"] as? [String: Any], let w = style["width"] as? String, w.hasSuffix("%"),
                   let pct = Double(w.dropLast()) else { return nil }
-            let fill = TW(k.className).bg ?? Color(red: 0.45, green: 0.62, blue: 1)
+            // Done is white, as in the design; only warning and failure keep a colour.
+            let cls = k.className.lowercased()
+            let coloured = ["danger", "destructive", "red", "warn", "amber", "yellow"].contains { cls.contains($0) }
+            let fill = coloured ? (TW(k.className).bg ?? .white.opacity(0.85)) : .white.opacity(0.85)
             return (pct / 100, fill)
         }
         guard parts.count == kids.count else { return nil }
@@ -864,6 +867,7 @@ enum PluginSegments {
         .pickerStyle(.segmented)
         .labelsHidden()
         .controlSize(.small)
+        .tint(.white.opacity(0.25))
         .fixedSize())
     }
 
@@ -873,7 +877,7 @@ enum PluginSegments {
         let binding = Binding(get: { value }, set: { v in if let h = n.handler("onChange") { host.dispatch(h, [v]) } })
         return AnyView(Picker("", selection: binding) {
             ForEach(options, id: \.0) { Text($0.1).tag($0.0) }
-        }.pickerStyle(.segmented).labelsHidden().fixedSize())
+        }.pickerStyle(.segmented).labelsHidden().tint(.white.opacity(0.25)).fixedSize())
     }
 
     @MainActor static func fromTabs(_ n: PluginNode, ctx: PluginContext) -> AnyView {
@@ -884,7 +888,7 @@ enum PluginSegments {
         return AnyView(VStack(alignment: .leading, spacing: 10) {
             Picker("", selection: binding) {
                 ForEach(triggers) { t in Text(t.plainText).tag(t.string("value") ?? t.plainText) }
-            }.pickerStyle(.segmented).labelsHidden().fixedSize()
+            }.pickerStyle(.segmented).labelsHidden().tint(.white.opacity(0.25)).fixedSize()
             PluginDraw.children(rest, in: ctx)
         })
     }
