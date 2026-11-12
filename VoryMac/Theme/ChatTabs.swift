@@ -196,7 +196,5 @@ struct ChatTabsChrome: ViewModifier {
                 }
             }
             .toolbar(removing: .title)
-            // The thread fades out under the title bar instead of running behind the tabs.
-            .scrollEdgeEffectStyle(.hard, for: .top)
     }
 }

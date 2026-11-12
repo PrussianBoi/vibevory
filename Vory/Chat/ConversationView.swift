@@ -256,7 +256,9 @@ struct ConversationView: View {
             // No toolbar strip over the thread: the bot and the menu float on the window, as in
             // Messages. A short thread sits at the bottom with nothing above it, and the
             // toolbar's own background spread down over that gap as a lighter band.
-            .toolbarBackgroundVisibility(.hidden, for: .windowToolbar)
+            // VibeVory: the chat tabs live in the title bar, so it has its frosted band again, and the
+            // thread scrolls under the glass instead of behind the tabs.
+            .toolbarBackgroundVisibility(.visible, for: .windowToolbar)
             .toolbar {
                 // Only while the Chats page is on show (the Mac keeps it mounted behind the
                 // other pages, see MainSplitView): its items must not stand in their toolbar.

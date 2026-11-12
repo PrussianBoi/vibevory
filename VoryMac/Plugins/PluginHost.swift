@@ -381,10 +381,15 @@ struct PluginPageArea: View {
     @State private var host = PluginHost.shared
 
     var body: some View {
-        if host.selected != nil, let web = host.webView {
+        // Always in the window once there is a host, hidden until a page is chosen: a web view
+        // that loads before it is in a window paints (its snapshot is right) but never shows.
+        if let web = host.webView {
+            let shown = host.selected != nil
             PluginSurface(webView: web)
                 .ignoresSafeArea(.container, edges: .top)
-                .transition(.opacity)
+                .opacity(shown ? 1 : 0)
+                .allowsHitTesting(shown)
+                .accessibilityHidden(!shown)
         }
     }
 }
