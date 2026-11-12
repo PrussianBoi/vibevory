@@ -2121,7 +2121,7 @@ def _process_request(connection, request):
     elif method == "GET" and base == "/api/files/download":
         return files_download(query)
     elif base.startswith("/api/plugins/workflows/") and workflows_rest(method, base, body_json) is not None:
-        result = workflows_rest(method, base, body_json if isinstance(body_json, dict) else {})
+        result = (200, workflows_rest(method, base, body_json if isinstance(body_json, dict) else {}))
     elif base.startswith("/api/plugins/kanban/") or base.startswith("/api/audio/"):
         try:
             payload = json.loads(getattr(request, "body", b"") or b"{}")
