@@ -768,7 +768,14 @@ private struct ChatTabsArea: View {
         // thread runs up under the window's toolbar (its glass), and over anything placed there.
         // The start page carries them, and each chat (ChatDetailStack): a pushed view's toolbar
         // takes the place of the stack's.
-        ChatDetailStack(path: $path) { StartPage(path: $path).modifier(ChatTabsChrome()) }
+        ChatDetailStack(path: $path) {
+            // The stack's pages are see-through (the sky shows behind them), so the start page
+            // under an open chat would show through it: hidden while anything is pushed.
+            StartPage(path: $path).modifier(ChatTabsChrome())
+                .opacity(path.isEmpty ? 1 : 0)
+                .allowsHitTesting(path.isEmpty)
+                .accessibilityHidden(!path.isEmpty)
+        }
             .onChange(of: tabs.selected) { _, _ in
                 path = tabs.current?.route?.path ?? NavigationPath()
             }
