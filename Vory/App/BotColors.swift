@@ -181,8 +181,17 @@ struct BotAvatar: View {
 
     var body: some View {
         #if os(macOS)
-        // VibeVory: a slowly turning sphere of dots, one shape per profile, in place of the face.
-        DotSphereAvatar(profile: profile, size: size, active: active || mood.state != .idle)
+        // VibeVory: the profile's own icon from Hermes (assets/avatar.*) when it has one, else a
+        // slowly turning sphere of dots, one shape per profile.
+        if let icon = ProfileIcons.shared.images[profile] {
+            Image(nsImage: icon).resizable().scaledToFill()
+                .frame(width: size, height: size).clipShape(Circle())
+                .overlay(Circle().strokeBorder(.white.opacity(0.18), lineWidth: 0.5))
+                .accessibilityHidden(true)
+        } else {
+            DotSphereAvatar(profile: profile, size: size, active: active || mood.state != .idle)
+                .task(id: profile) { await ProfileIcons.shared.load(profile) }
+        }
         #else
         faceBody
         #endif
@@ -579,6 +588,34 @@ struct DotSphereAvatar: View {
         }
         .frame(width: size, height: size)
         .accessibilityHidden(true)
+    }
+}
+#endif
+
+#if os(macOS)
+/// Each profile's own icon, as Hermes keeps it (`assets/avatar.*`, the one Hermes Desktop shows),
+/// asked of the gateway once per profile and connection (`profiles.get_asset`).
+@MainActor @Observable
+final class ProfileIcons {
+    static let shared = ProfileIcons()
+    private(set) var images: [String: NSImage] = [:]
+    @ObservationIgnored private var asked: Set<String> = []
+
+    func load(_ profile: String) async {
+        guard !profile.isEmpty, let rt = AppModel.shared.runtime else { return }
+        let key = rt.connection.id.uuidString + "/" + profile
+        guard !asked.contains(key) else { return }
+        asked.insert(key)
+        // Asked again later only when the call itself failed; a profile with no icon is not asked twice.
+        guard let r = try? await rt.rpc("profiles.get_asset", ["name": .string(profile), "asset": .string("avatar")], timeout: 20) else {
+            asked.remove(key); return
+        }
+        guard r["found"]?.boolValue == true,
+              let url = r["data"]?.stringValue, let comma = url.firstIndex(of: ","),
+              let data = Data(base64Encoded: String(url[url.index(after: comma)...])),
+              let image = NSImage(data: data)
+        else { return }
+        images[profile] = image
     }
 }
 #endif
