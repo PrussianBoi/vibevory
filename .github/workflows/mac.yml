@@ -34,7 +34,10 @@ jobs:
             build 2>&1 | tee build.log | grep -E "error:|warning: .*deprecated|BUILD (SUCCEEDED|FAILED)" || true
           test -d build/Build/Products/Release/*.app
 
-      - name: Ad-hoc sign and zip
+      - name: Sign and zip
+        env:
+          ARTHA_SIGN_P12: ${{ secrets.ARTHA_SIGN_P12 }}
+          ARTHA_SIGN_PASS: ${{ secrets.ARTHA_SIGN_PASS }}
         run: |
           APP=$(ls -d build/Build/Products/Release/*.app | head -1)
           # No extensions and no entitlements: they need Apple's provisioning. Push, widgets and
@@ -45,7 +48,23 @@ jobs:
           mv "$APP" build/Build/Products/Release/Artha.app && APP=build/Build/Products/Release/Artha.app
           # The build number Artha's updater compares against the latest release.
           /usr/libexec/PlistBuddy -c "Add :ArthaBuild integer ${{ github.run_number }}" "$APP/Contents/Info.plist"
-          codesign --force --deep --sign - "$APP"
+          # One permanent self-signed identity (repo secrets), so macOS sees every build as the same app:
+          # "Always Allow" on a keychain item then carries over to later builds and updates. Ad-hoc without it.
+          if [ -n "$ARTHA_SIGN_P12" ]; then
+            echo "$ARTHA_SIGN_P12" | base64 --decode > sign.p12
+            security create-keychain -p ci sign.keychain
+            security set-keychain-settings sign.keychain
+            security unlock-keychain -p ci sign.keychain
+            security import sign.p12 -k sign.keychain -P "$ARTHA_SIGN_PASS" -T /usr/bin/codesign
+            security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k ci sign.keychain > /dev/null
+            security list-keychains -d user -s sign.keychain $(security list-keychains -d user | tr -d '"')
+            HASH=$(security find-certificate -c "Artha Self-Signed" -Z sign.keychain | awk '/SHA-1/{print $NF}')
+            codesign --force --deep --sign "$HASH" --keychain sign.keychain "$APP"
+            rm -f sign.p12
+          else
+            codesign --force --deep --sign - "$APP"
+          fi
+          codesign -d -r- "$APP" 2>&1 | tail -1
           codesign --verify --deep "$APP"
           mkdir -p out && ditto -c -k --keepParent "$APP" out/Artha-mac.zip
 
