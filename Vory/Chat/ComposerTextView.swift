@@ -133,11 +133,27 @@ struct ComposerTextView: View {
     static let acceptedTypes: [UTType] = [.image, .movie, .pdf, .audio, .plainText, .text, .fileURL, .data]
     private static let attachmentTypes: [UTType] = [.image, .movie, .pdf, .audio]
 
+    /// The words' full height; the field shows up to `maxLines` of it and scrolls the rest.
+    @State private var fieldHeight: CGFloat = 22
+
     var body: some View {
+        // VibeVory: the field grows whole inside its own scroll view. A field capped with lineLimit
+        // only moved with the cursor: the trackpad couldn't scroll it back up.
+        ScrollView(.vertical) {
+            field
+                .fixedSize(horizontal: false, vertical: true)
+                .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { fieldHeight = $0 }
+        }
+        .scrollIndicators(.automatic)
+        .defaultScrollAnchor(.bottom, for: .sizeChanges)
+        .frame(height: min(max(fieldHeight, 22), CGFloat(maxLines) * 22))
+    }
+
+    private var field: some View {
         // VibeVory: a placeholder that stays readable on the light sunset.
         TextField(placeholder, text: $text, prompt: Text(placeholder).foregroundStyle(.white.opacity(0.6)), axis: .vertical)
             .textFieldStyle(.plain)
-            .lineLimit(1...maxLines)
+            .lineLimit(1...)
             .focused($isFocused)
             .background(ComposedKeys.Anchor(keys: composed))
             .onSubmit {

@@ -570,10 +570,10 @@ struct ComposerView: View {
             .onChange(of: menuContext) { _, ctx in if menuMark?.context != ctx { menuMark = nil } }
             .onChange(of: text) { old, new in
                 holdNote = nil
-                // Offered once as the text gets long (a paste lands in one jump;
-                // typing crosses the line once); "Keep" holds until it shrinks again.
-                let limit = 800
-                if new.count >= limit, old.count < limit || new.count - old.count > 400 { withAnimation(.snappy) { longTextOffer = true } }
+                // VibeVory: offered only for a big paste (one jump of 3,000+ characters), never while typing;
+                // it went off at 800 characters, a couple of paragraphs. "Keep" holds until it shrinks again.
+                let limit = 3000
+                if new.count >= limit, new.count - old.count > 2000 { withAnimation(.snappy) { longTextOffer = true } }
                 else if new.count < limit { longTextOffer = false }
             }
     }
