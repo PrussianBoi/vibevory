@@ -86,12 +86,13 @@ extension View {
             .overlay(shape.strokeBorder(.white.opacity(rim ? 0.16 : 0), lineWidth: 0.5).allowsHitTesting(false))
     }
 
-    /// A reply's words on the Mac: 12.5 pt, airy, near-white with a faint glow.
+    /// A reply's words on the Mac: 12.5 pt, airy, near-white.
     func etherealReply() -> some View {
         font(Ethereal.body)
             .lineSpacing(Ethereal.lineSpacing)
             .foregroundStyle(Ethereal.text)
-            .shadow(color: Ethereal.glow, radius: 9)
+        // No glow: a shadow on a whole reply renders it twice, off-screen, on every redraw
+        // (streaming, scrolling, the sky moving), which made long chats lag.
     }
 
     /// The soft glass pill of the person's own message.
