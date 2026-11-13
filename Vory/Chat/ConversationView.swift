@@ -293,6 +293,12 @@ struct ConversationView: View {
                     .padding(.bottom, 22 - BottomDock.bottomPadding)
             }
             .navigationSubtitle(pageShown ? macSubtitle(chat) : "")
+            // VibeVory: a chat kept alive in the deck selects its bot again when it comes back in front, as its open did.
+            .onChange(of: pageShown) { _, shown in
+                guard shown, !route.readOnly, let p = route.profile, !p.isEmpty, let runtime = model.runtime,
+                      runtime.selectedProfile != p else { return }
+                runtime.selectedProfile = p
+            }
             // No toolbar strip over the thread: the bot and the menu float on the window, as in
             // Messages. A short thread sits at the bottom with nothing above it, and the
             // toolbar's own background spread down over that gap as a lighter band.

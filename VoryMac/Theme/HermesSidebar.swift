@@ -177,6 +177,7 @@ struct HermesSidebar: View {
     @State private var chatTabs = ChatTabs.shared
     @State private var query = ""
     @State private var renaming: StoredSession?
+    @State private var prewarm: Task<Void, Never>?
     @State private var renameText = ""
     @State private var deleting: StoredSession?
     @AppStorage("vibe.sidebar.pinnedOpen") private var pinnedOpen = true
@@ -373,6 +374,18 @@ struct HermesSidebar: View {
         SessionRowView(session: s, selected: selectedID == s.id,
                        state: state(of: s)) {
             open(s)
+        }
+        // VibeVory: resting the pointer on a chat starts loading it (attach and history), so a click a moment later
+        // finds it ready instead of waiting on the gateway.
+        .onHover { inside in
+            prewarm?.cancel()
+            guard inside, let runtime, selectedID != s.id else { return }
+            let (id, title, profile) = (s.id, s.displayTitle, s.profile)
+            prewarm = Task { @MainActor in
+                try? await Task.sleep(for: .milliseconds(120))
+                guard !Task.isCancelled else { return }
+                _ = try? await runtime.openChat(storedID: id, title: title, profile: profile)
+            }
         }
         .contextMenu {
             Button { ChatTabs.shared.newTab(); open(s) } label: { Label("Open in new tab", systemImage: "macwindow.badge.plus") }
