@@ -399,6 +399,7 @@ struct TranscriptView: View {
                 metrics.userScrolling = touching
                 #if os(macOS)
                 if hitGate.scrolling != touching { hitGate.scrolling = touching }
+                if SkyHold.shared.scrolling != touching { SkyHold.shared.scrolling = touching }
                 #endif
                 // Shared with the lists: idle faces hold their blink while the thread moves.
                 BotAmbient.shared.scrolling = touching
@@ -469,6 +470,11 @@ struct TranscriptView: View {
                 // history slow to come (1.5 s), the rows it has are shown meanwhile, and its landing hides it again.
                 metrics.shownItems = chat.items.count; metrics.landings = 0; metrics.probed = false
                 if chat.isResuming, rows.count < 20 { landingOutOfSight = true; capLanding(after: 1500) }
+                #if os(macOS)
+                // VibeVory: a chat already loaded (switching chats or tabs) was shown while the lazy stack measured its
+                // rows and scrolled itself to the end in sight; it lands out of sight too, 600 ms at most.
+                else if !chat.isResuming, rows.count >= 8 { landingOutOfSight = true; capLanding(after: 600) }
+                #endif
             }
             .onChange(of: chat.isResuming) { _, now in
                 guard !now, landingOutOfSight else { return }
@@ -1235,6 +1241,14 @@ private struct ScrollViewProbe: UIViewRepresentable {
 /// answered by walking every row's content shape and every reply's two hover trackers: a third of the main thread
 /// during a drag on the Mac (1.5 (23), measured). The scroll view still gets its events; a click or a hover works
 /// again the moment the thread stops. Observable on its own so only the gate's modifier reads it, not the thread.
+#if os(macOS)
+/// VibeVory: the window's live sky pauses while a thread scrolls (AuroraBackground reads it).
+@MainActor @Observable final class SkyHold {
+    static let shared = SkyHold()
+    var scrolling = false
+}
+#endif
+
 @Observable final class ThreadHitGate {
     var scrolling = false
     struct Gate: ViewModifier {

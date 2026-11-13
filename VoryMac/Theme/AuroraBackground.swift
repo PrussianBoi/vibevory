@@ -37,7 +37,7 @@ struct AuroraBackground: View {
         let scene = SkyScene(rawValue: sceneName) ?? .aurora
         GeometryReader { geo in
             let size = CGSize(width: max(1, geo.size.width / downscale), height: max(1, geo.size.height / downscale))
-            TimelineView(.animation(minimumInterval: 1.0 / 20.0, paused: reduceMotion || activeState == .inactive)) { context in
+            TimelineView(.animation(minimumInterval: 1.0 / 20.0, paused: reduceMotion || activeState == .inactive || SkyHold.shared.scrolling)) { context in
                 let t = Float(context.date.timeIntervalSince(Self.start)) + 40   // start mid-display, not at dark
                 Rectangle()
                     .frame(width: size.width, height: size.height)

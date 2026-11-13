@@ -14,13 +14,16 @@ enum ChatNavigation {
     nonisolated(unsafe) static var onSelect: ((Any) -> Void)?
 
     static func select(_ route: some Hashable, in path: inout NavigationPath) {
+        // No animation: the threads are see-through, so a cross-fade drew one chat over the other.
+        var still = Transaction()
+        still.disablesAnimations = true
         if let chat = route as? ChatRoute {
             let t = tokened(chat)
             onSelect?(t as Any)
-            path = NavigationPath([t])
+            withTransaction(still) { path = NavigationPath([t]) }
         } else {
             onSelect?(route as Any)
-            path = NavigationPath([route])
+            withTransaction(still) { path = NavigationPath([route]) }
         }
     }
 

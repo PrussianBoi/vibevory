@@ -15,7 +15,13 @@ struct ConversationView: View {
     @State private var renaming = false
     /// A bot whose "@name" was tapped in the thread: its card opens (#302).
     @State private var mentionedBot: String?
-    @State private var composerText = ""
+    /// The typed text lives in a box only the dock reads: as plain `@State` here, every keystroke ran this whole
+    /// view again, the thread with it (typing lag on a long chat, and the thread jumping while typing).
+    @State private var composerBox = ComposerBox()
+    private var composerText: String {
+        get { composerBox.text }
+        nonmutating set { composerBox.text = newValue }
+    }
     /// A bubble chosen with Reply: quoted above the next message, like a reply in Messages.
     @State private var composerQuote = ""
     /// A bubble's words waiting for "Replace your draft?" (Edit & resend or Copy to message over words already typed),
@@ -225,7 +231,6 @@ struct ConversationView: View {
                     .onAppear { handle(route: model.pendingRoute, chat: chat) }
                     // Whatever was typed survives leaving the chat: saved per session as it changes,
                     // restored when the chat opens, cleared by a send (the composer empties the text).
-                    .onChange(of: composerText) { _, t in ComposerDrafts.save(t, for: chat) }
             } else if let loadError {
                 ContentUnavailableView("Could not open chat", systemImage: "exclamationmark.triangle", description: Text(loadError))
             } else {
@@ -496,7 +501,7 @@ struct ConversationView: View {
     static func keepsDockHeight(_ height: CGFloat, window: CGFloat) -> Bool { height > 0 && (window <= 0 || height < window) }
 
     private func dock(_ chat: ChatSession) -> some View {
-        BottomDock(chat: chat, text: $composerText, quote: $composerQuote, namespace: glassNamespace, readOnly: route.readOnly)
+        BottomDock(chat: chat, text: $composerBox.text, quote: $composerQuote, namespace: glassNamespace, readOnly: route.readOnly)
             // Demo mode's chats put the keyboard away after a send (#490, Matt: swiping it away was hard); the app's own
             // chats keep it up for the next message.
             .environment(\.composerFocusesAfterSend, !chat.runtime.connection.isDemo)
@@ -632,6 +637,8 @@ private struct ClearsDelivered: View {
 }
 
 /// Composer + queue + cards, in one glass container so the composer morphs into an approval card.
+@Observable final class ComposerBox { var text = "" }
+
 struct BottomDock: View {
     @Bindable var chat: ChatSession
     @Binding var text: String
@@ -644,6 +651,13 @@ struct BottomDock: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
+        dock
+            // Whatever was typed survives leaving the chat: saved per session as it changes,
+            // restored when the chat opens, cleared by a send (the composer empties the text).
+            .onChange(of: text) { _, t in ComposerDrafts.save(t, for: chat) }
+    }
+
+    @ViewBuilder private var dock: some View {
         // The container is what lets the composer morph into a card; menus presented from
         // inside it (the + button) did not take taps on the phone, so the container only wraps
         // what morphs, and the composer draws its own glass.

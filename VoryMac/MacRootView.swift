@@ -777,7 +777,10 @@ private struct ChatTabsArea: View {
                 .accessibilityHidden(!path.isEmpty)
         }
             .onChange(of: tabs.selected) { _, _ in
-                path = tabs.current?.route?.path ?? NavigationPath()
+                // Swapped at once (the tab's own highlight still glides): see ChatNavigation.select.
+                var still = Transaction()
+                still.disablesAnimations = true
+                withTransaction(still) { path = tabs.current?.route?.path ?? NavigationPath() }
             }
             #if DEBUG
             // `-vibe-open-chat <stored id>`: opens that chat a few seconds in (the CI screenshots).
