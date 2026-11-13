@@ -2554,6 +2554,13 @@ extension Notification.Name {
 
 /// Renders markdown blocks; inline styling from AttributedString(markdown:).
 struct MarkdownView: View, Equatable {
+    /// The gap between paragraphs: on the Mac clearly more than the gap between lines, so the
+    /// paragraphs of a long reply read as separate blocks.
+    #if os(macOS)
+    static let blockGap: CGFloat = 14
+    #else
+    static let blockGap: CGFloat = 8
+    #endif
     var text: String
     var style: Style = .reply
     var streaming = false
@@ -2662,7 +2669,7 @@ struct MarkdownView: View, Equatable {
     var body: some View {
         let _ = Perf.tick("markdown")
         let blocks = Self.blocks(text, streaming: streaming)
-        let stack = VStack(alignment: .leading, spacing: style == .reasoning ? 6 : 8) {
+        let stack = VStack(alignment: .leading, spacing: style == .reasoning ? 6 : Self.blockGap) {
             ForEach(Array(blocks.enumerated()), id: \.offset) { i, block in
                 render(block, at: i)
             }

@@ -58,7 +58,7 @@ enum Ethereal {
     static let bodySize: CGFloat = 12.5
     static let body = Font.system(size: bodySize)
     /// About 1.7× line height at 12.5 pt.
-    static let lineSpacing: CGFloat = 6
+    static let lineSpacing: CGFloat = 4
     static let codeFont = Font.system(size: 11.5, design: .monospaced)
     /// Timestamps and system lines.
     static let small = Font.system(size: 11)

@@ -56,6 +56,7 @@ struct ComposerView: View {
     @State private var dropTargeted = false
     /// The pointer is over the model chip or a mention row (the Mac).
     @State private var chipHovered = false
+    @State private var effortHovered = false
     @State private var mentionHovered: String?
     private var holdStartsVoiceMode: Bool {
         #if os(iOS)
@@ -772,6 +773,43 @@ struct ComposerView: View {
     /// The chat's model and reasoning level on one small chip; a tap opens the same menus the
     /// header's … menu has (models by provider, then the reasoning levels).
     private var modelChip: some View {
+        #if os(macOS)
+        // VibeVory: two pills, two menus: the model on the left, the reasoning level on the right.
+        HStack(spacing: 6) {
+            Menu { ModelMenuContent(chat: chat) } label: {
+                HStack(spacing: 4) {
+                    Text(chat.modelName.isEmpty ? "Model" : Self.shortModel(chat.modelName)).lineLimit(1).truncationMode(.middle)
+                    Image(systemName: "chevron.down").font(.system(size: 7, weight: .semibold))
+                }
+                .etherealControlPill(hovered: chipHovered)
+                .contentShape(.capsule)
+            }
+            .menuOrder(.fixed).menuIndicator(.hidden).buttonStyle(.plain).fixedSize()
+            .onHover { chipHovered = $0 }
+            .accessibilityIdentifier("composer.modelChip")
+            .accessibilityLabel("Model \(chat.modelName.isEmpty ? "not set" : chat.modelName)")
+            Menu {
+                ForEach(ReasoningEffort.levels(offered: nil), id: \.self) { level in
+                    Button {
+                        Task { do { try await chat.setReasoning(level) } catch { chat.banner = error.localizedDescription } }
+                    } label: {
+                        if chat.reasoningEffort == level { MenuLabel(ReasoningEffort.name(of: level), systemImage: "checkmark") } else { Text(ReasoningEffort.name(of: level)) }
+                    }
+                }
+            } label: {
+                HStack(spacing: 4) {
+                    Text(Self.effortLabel(chat.reasoningEffort)).lineLimit(1)
+                    Image(systemName: "chevron.down").font(.system(size: 7, weight: .semibold))
+                }
+                .etherealControlPill(hovered: effortHovered)
+                .contentShape(.capsule)
+            }
+            .menuOrder(.fixed).menuIndicator(.hidden).buttonStyle(.plain).fixedSize()
+            .onHover { effortHovered = $0 }
+            .accessibilityIdentifier("composer.effortChip")
+            .accessibilityLabel("Reasoning \(Self.effortLabel(chat.reasoningEffort))")
+        }
+        #else
         Menu {
             Section("Model") { ModelMenuContent(chat: chat) }
             ReasoningEffortMenu(chat: chat)
@@ -822,6 +860,14 @@ struct ComposerView: View {
             Label("\(chat.modelName.isEmpty ? "Model" : Self.shortModel(chat.modelName)) · \(ReasoningEffort.name(of: chat.reasoningEffort ?? "medium"))", systemImage: "cpu")
         }
         .accessibilityLabel("Model \(chat.modelName.isEmpty ? "not set" : chat.modelName), reasoning \(ReasoningEffort.name(of: chat.reasoningEffort ?? "medium"))")
+
+        #endif
+    }
+
+    /// The level's name; "Effort" when the chat has none set (an empty level read as nothing).
+    static func effortLabel(_ level: String?) -> String {
+        let l = (level ?? "").trimmingCharacters(in: .whitespaces)
+        return l.isEmpty ? "Effort" : ReasoningEffort.name(of: l)
     }
 
     static func shortModel(_ m: String) -> String {
