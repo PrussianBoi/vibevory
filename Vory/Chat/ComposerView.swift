@@ -40,6 +40,9 @@ struct ComposerView: View {
     private var group: Bool { newMessage?.group == true }
     /// Keyboard focus, driven both ways (the text view is UIKit; see ComposerTextView).
     @State private var focused = false
+    #if os(macOS)
+    @Environment(\.macPageShown) private var pageShown
+    #endif
     /// The cursor stays in the field after a send, ready for the next message, as in Messages. Onboarding's tour (#388)
     /// turns it off: its Send is a step of the tour, and the keyboard coming up covered the chat it shows.
     @Environment(\.composerFocusesAfterSend) private var focusesAfterSend
@@ -503,6 +506,13 @@ struct ComposerView: View {
         // A new chat on the Mac (⌘N, the list's button, an intent) opens with the cursor in
         // the box, ready to type, as the box is after a message goes out (#212).
         .onAppear { if chat.items.isEmpty, !chat.isDraft { focused = true } }
+        // VibeVory: a chat kept alive behind another (the chat deck) gives up the keyboard, and gets its cursor back
+        // when it is in front again.
+        .onChange(of: pageShown) { _, shown in
+            guard !chat.isDraft else { return }
+            if shown { if ChatViewMemory.focused.contains(ChatViewMemory.key(for: chat)) { focused = true } }
+            else { ChatViewMemory.setFocused(focused, for: chat); focused = false }
+        }
         #endif
         .photosPicker(isPresented: $showPhotos, selection: $photoItems, maxSelectionCount: 6, matching: .any(of: [.images, .videos]))
         // Counted while the photos load: a send meanwhile waits for them.

@@ -768,14 +768,7 @@ private struct ChatTabsArea: View {
         // thread runs up under the window's toolbar (its glass), and over anything placed there.
         // The start page carries them, and each chat (ChatDetailStack): a pushed view's toolbar
         // takes the place of the stack's.
-        ChatDetailStack(path: $path) {
-            // The stack's pages are see-through (the sky shows behind them), so the start page
-            // under an open chat would show through it: hidden while anything is pushed.
-            StartPage(path: $path).modifier(ChatTabsChrome())
-                .opacity(path.isEmpty ? 1 : 0)
-                .allowsHitTesting(path.isEmpty)
-                .accessibilityHidden(!path.isEmpty)
-        }
+        ChatDeck(path: $path)
             .onChange(of: tabs.selected) { _, _ in
                 // Swapped at once (the tab's own highlight still glides): see ChatNavigation.select.
                 var still = Transaction()
@@ -791,6 +784,75 @@ private struct ChatTabsArea: View {
                 ChatNavigation.select(ChatRoute(storedID: args[i + 1]), in: &path)
             }
             #endif
+    }
+}
+
+/// VibeVory: the last few chats stay alive, one in front and the rest hidden behind it, so going back to one is
+/// instant: no thread rebuilt, no history laid out again, no landing at its end. Built anew per open, a long chat
+/// took a visible beat on every switch. Which chat is in front comes from the tabs (`ChatTabs`, told of every
+/// selection) while the path has one; an empty path is the start page. A hidden chat declares no toolbar items and
+/// gives up the keyboard (`macPageShown`).
+private struct ChatDeck: View {
+    @Binding var path: NavigationPath
+    @Environment(\.macPageShown) private var pageShown
+    @State private var tabs = ChatTabs.shared
+    /// Least recently in front first.
+    @State private var kept: [TabRoute] = []
+    static let keep = 4
+
+    private var front: TabRoute? { path.isEmpty ? nil : tabs.current?.route }
+    /// The kept chats, and the one in front from the update it comes in (it joins `kept` an update later).
+    private var shown: [TabRoute] {
+        guard let front, !kept.contains(front) else { return kept }
+        return kept + [front]
+    }
+
+    var body: some View {
+        ZStack {
+            // The pages are see-through (the sky shows behind them): only the one in front is drawn.
+            NavigationStack { StartPage(path: $path).modifier(ChatTabsChrome()) }
+                .environment(\.macPageShown, pageShown && front == nil)
+                .opacity(front == nil ? 1 : 0)
+                .allowsHitTesting(front == nil)
+                .accessibilityHidden(front != nil)
+            ForEach(shown, id: \.self) { route in
+                let on = route == front
+                NavigationStack { page(route) }
+                    .environment(\.macPageShown, pageShown && on)
+                    .environment(\.macChatClose, { close(route) })
+                    .opacity(on ? 1 : 0)
+                    .allowsHitTesting(on)
+                    .accessibilityHidden(!on)
+            }
+        }
+        .onAppear { remember(front) }
+        .onChange(of: front) { _, f in remember(f) }
+    }
+
+    @ViewBuilder private func page(_ route: TabRoute) -> some View {
+        switch route {
+        case .chat(let c):
+            ConversationView(route: c).navigationBarBackButtonHidden(true).modifier(ChatTabsChrome(trailing: false))
+        case .room(let r):
+            RoomView(room: r.room, initialText: r.initialText).navigationBarBackButtonHidden(true).modifier(ChatTabsChrome())
+        }
+    }
+
+    private func remember(_ route: TabRoute?) {
+        guard let route else { return }
+        kept.removeAll { $0 == route }
+        kept.append(route)
+        if kept.count > Self.keep { kept.removeFirst(kept.count - Self.keep) }
+    }
+
+    /// A chat's Back or Close: the start page, at once, and the chat no longer kept (closed, its session is gone).
+    private func close(_ route: TabRoute) {
+        var still = Transaction()
+        still.disablesAnimations = true
+        withTransaction(still) {
+            path = NavigationPath()
+            kept.removeAll { $0 == route }
+        }
     }
 }
 

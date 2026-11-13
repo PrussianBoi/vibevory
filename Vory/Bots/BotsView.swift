@@ -567,6 +567,7 @@ struct RoomView: View {
     @State private var lastSendAt: Date = .distantPast
     @State private var showMembers = false
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.macChatClose) private var macChatClose
     /// One thread per room composer; the gateway wants the same id on every message.
     private let threadID = "main"
 
@@ -597,7 +598,7 @@ struct RoomView: View {
             #if os(iOS)
             .toolbar(.hidden, for: .navigationBar)
             .safeAreaInset(edge: .top, spacing: 0) {
-                GroupChatHeader(room: room, working: working, onBack: { dismiss() }, onMembers: { showMembers = true })
+                GroupChatHeader(room: room, working: working, onBack: { if let macChatClose { macChatClose() } else { dismiss() } }, onMembers: { showMembers = true })
             }
             // The bar is hidden, which switches off the edge swipe back; put it back.
             .background(InteractivePopEnabler())

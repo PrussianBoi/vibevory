@@ -276,6 +276,9 @@ private struct MacPageSearchable: ViewModifier {
 /// page's. Always true where nothing sets it: the iPhone, sheets, the page on show.
 extension EnvironmentValues {
     @Entry var macPageShown: Bool = true
+    /// VibeVory: a chat kept alive in the Mac's chat deck closes through this (it is no stack's pushed page, so
+    /// `dismiss` would do nothing). Nil elsewhere: `dismiss` as ever.
+    @Entry var macChatClose: (() -> Void)? = nil
     /// The tab this page is the root of (`tabRoot`): the phone's morph bar draws a root page's
     /// own actions (its +, its options) in its trailing capsule, and nowhere else. A page pushed
     /// from Settings, shown in a sheet, or on the Mac has nil, and keeps its own toolbar items

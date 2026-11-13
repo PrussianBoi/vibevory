@@ -112,6 +112,9 @@ struct ConversationView: View {
     private func botLabel(_ chat: ChatSession) -> String { _ = namesRaw; return chat.runtime.profiles.first { $0.name == chat.profileName }?.label ?? chat.profileName }
     @Namespace private var glassNamespace
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.macChatClose) private var macChatClose
+    /// Back to the start page: the deck's close on the Mac, the stack's pop elsewhere.
+    private func leave() { if let macChatClose { macChatClose() } else { dismiss() } }
 
     var body: some View {
         let _ = Perf.tick("conversation-body")
@@ -220,12 +223,12 @@ struct ConversationView: View {
                         guard let r, mine else { return }
                         model.chatRequest = nil
                         switch r.kind {
-                        case .back: dismiss()
+                        case .back: leave()
                         case .profile: showProfile = true
                         case .rename: renaming = true
                         case .context: showContext = true
                         case .newChat: Task { await newChat() }
-                        case .close: model.runtime?.closeChat(chat); dismiss()
+                        case .close: model.runtime?.closeChat(chat); leave()
                         }
                     }
                     .onAppear { handle(route: model.pendingRoute, chat: chat) }
@@ -319,7 +322,7 @@ struct ConversationView: View {
                 ToolbarItem(placement: .primaryAction) {
                     Menu {
                         ChatMenuItems(chat: chat, onProfile: { showProfile = true }, onRename: { renaming = true }, onContext: { showContext = true },
-                                      onNewChat: { Task { await newChat() } }, onClose: { model.runtime?.closeChat(chat); dismiss() })
+                                      onNewChat: { Task { await newChat() } }, onClose: { model.runtime?.closeChat(chat); leave() })
                     } label: { Label("Chat options", systemImage: "ellipsis") }
                     .menuIndicator(.hidden)
                     .help("Chat options")
@@ -396,7 +399,7 @@ struct ConversationView: View {
         #if os(iOS)
         if StripMarkers.shared.side?.chat == ObjectIdentifier(chat) { model.chatRequest = .init(.back); return }
         #endif
-        dismiss()
+        leave()
     }
 
     private func open() async {
@@ -522,7 +525,7 @@ struct ConversationView: View {
             // Back stays on a wide window too (Matt, 2026-10-10): it clears the column.
             ChatHeader(chat: chat, fold: fold, showBack: true,
                        onBack: { backFromHeader(chat) }, onProfile: { showProfile = true }, onRename: { renaming = true }, onContext: { showContext = true },
-                       onNewChat: { Task { await newChat() } }, onClose: { model.runtime?.closeChat(chat); dismiss() })
+                       onNewChat: { Task { await newChat() } }, onClose: { model.runtime?.closeChat(chat); leave() })
                 // The header's own size and bottom edge (the reader around it is thread-sized):
                 // its height, and its bottom in window space for the thread's top margin.
                 .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { if $0 < 200 { headerHeight = $0 } }
@@ -654,7 +657,14 @@ struct BottomDock: View {
         dock
             // Whatever was typed survives leaving the chat: saved per session as it changes,
             // restored when the chat opens, cleared by a send (the composer empties the text).
-            .onChange(of: text) { _, t in ComposerDrafts.save(t, for: chat) }
+            // Half a second after the typing stops, not per key: a defaults write re-runs every view that reads defaults
+            // (the sidebar's lists among them), and per key that was typing lag.
+            .task(id: text) {
+                try? await Task.sleep(for: .milliseconds(500))
+                guard !Task.isCancelled else { return }
+                ComposerDrafts.save(text, for: chat)
+            }
+            .onDisappear { ComposerDrafts.save(text, for: chat) }
     }
 
     @ViewBuilder private var dock: some View {
