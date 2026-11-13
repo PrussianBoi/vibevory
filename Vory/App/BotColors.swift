@@ -543,7 +543,9 @@ struct DotSphereAvatar: View {
 
     var body: some View {
         let kind = Self.kind(for: profile)
-        TimelineView(.animation(minimumInterval: 1.0 / 30.0, paused: reduceMotion)) { context in
+        // Only a bot that is working turns; every other sphere is drawn once and held still (a dozen
+        // spheres each redrawing hundreds of dots 30 times a second made the whole app lag).
+        TimelineView(.animation(minimumInterval: 1.0 / 30.0, paused: reduceMotion || !active || size < 30)) { context in
             let t = Float(context.date.timeIntervalSince(Self.start))
             Canvas { ctx, sz in
                 let pts = Self.points(kind, small: size < 30)

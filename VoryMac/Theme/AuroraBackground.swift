@@ -23,7 +23,7 @@ enum SkyScene: String, CaseIterable, Identifiable {
 }
 
 /// The live sky behind the whole window (Metal), kept light: drawn at a third of the window's size
-/// and scaled up (the sky is soft, so nothing is lost), at 24 fps, paused while the window is in the
+/// and scaled up (the sky is soft, so nothing is lost), at 20 fps, paused while the window is in the
 /// background or Reduce Motion is on.
 struct AuroraBackground: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
@@ -37,7 +37,7 @@ struct AuroraBackground: View {
         let scene = SkyScene(rawValue: sceneName) ?? .aurora
         GeometryReader { geo in
             let size = CGSize(width: max(1, geo.size.width / downscale), height: max(1, geo.size.height / downscale))
-            TimelineView(.animation(minimumInterval: 1.0 / 24.0, paused: reduceMotion || activeState == .inactive)) { context in
+            TimelineView(.animation(minimumInterval: 1.0 / 20.0, paused: reduceMotion || activeState == .inactive)) { context in
                 let t = Float(context.date.timeIntervalSince(Self.start)) + 40   // start mid-display, not at dark
                 Rectangle()
                     .frame(width: size.width, height: size.height)
