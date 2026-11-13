@@ -761,9 +761,15 @@ extension GatewayFormView {
                         .keyboardShortcut(.cancelAction)
                     MacCapsuleButton(title: existing == nil ? "Connect" : "Save", prominent: true) {
                         if name.trimmingCharacters(in: .whitespaces).isEmpty { name = normalizedURL?.host ?? "Home" }
-                        save()
+                        if testPassed || backupPassed { save(); return }
+                        // Not tested yet (a password or browser sign-in never tests on its own): test now,
+                        // and connect straight away if it passes.
+                        Task {
+                            await runTest()
+                            if testPassed { save() }
+                        }
                     }
-                    .disabled(!(testPassed || backupPassed) || backupProblem != nil)
+                    .disabled(testing || backupProblem != nil || !(testPassed || backupPassed || canTest))
                     .keyboardShortcut(.defaultAction)
                     .accessibilityIdentifier("gateway.save")
                 }
