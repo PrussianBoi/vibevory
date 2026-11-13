@@ -55,6 +55,8 @@ final class SidebarSessions {
     static let shared = SidebarSessions()
 
     var sessions: [StoredSession] = []
+    /// Sessions the sidebar never lists: scheduled jobs and one-shot command-line runs.
+    static let hiddenSources: Set<String> = ["cron", "oneshot"]
     var jobs: [Job] = []
     var limit = 60
     var loading = false
@@ -84,7 +86,8 @@ final class SidebarSessions {
                  URLQueryItem(name: "archived", value: "exclude"), URLQueryItem(name: "exclude_sources", value: "cron")]
         do {
             let r: SessionListResponse = try await runtime.api.get("/api/sessions", query: q, profile: runtime.selectedProfile)
-            sessions = r.sessions.filter { $0.archived != true && $0.source != "cron" }
+            // VibeVory: no one-shot runs either (`hermes -z` from scripts): each call is a session of its own.
+            sessions = r.sessions.filter { $0.archived != true && !Self.hiddenSources.contains($0.source ?? "") }
             error = nil
         } catch {
             if sessions.isEmpty { self.error = error.localizedDescription }
@@ -109,7 +112,7 @@ final class SidebarSessions {
             let arr = r["sessions"]?.arrayValue ?? r["results"]?.arrayValue ?? r.arrayValue ?? []
             let remote = arr.compactMap { try? $0.decode(StoredSession.self) }
             var seen = Set(local.map(\.id))
-            searchHits = local + remote.filter { seen.insert($0.id).inserted }
+            searchHits = local + remote.filter { !Self.hiddenSources.contains($0.source ?? "") && seen.insert($0.id).inserted }
         }
     }
 
