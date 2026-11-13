@@ -760,6 +760,8 @@ struct AppearanceView: View {
     @AppStorage(ChatStyle.headerShowsTitle) private var headerShowsTitle = false
     #if os(macOS)
     @AppStorage("vibe.skyScene") private var skyScene = SkyScene.aurora.rawValue
+    @AppStorage("vibe.stillSky") private var stillSky = false
+    @AppStorage("vibe.lightThreadGlass") private var lightThreadGlass = false
     private func tabBinding(_ tab: AppModel.AppTab) -> Binding<Bool> {
         Binding(get: { layout.contains(tab) }, set: { on in var l = layout; l.set(tab, enabled: on); layoutRaw = l.encoded })
     }
@@ -808,6 +810,13 @@ struct AppearanceView: View {
                 .pickerStyle(.segmented)
             } header: { Text("Sky") } footer: {
                 Text("The live scene behind the window. It pauses while the window is in the background or Reduce Motion is on.")
+            }
+            // VibeVory: two switches to try while chasing scroll lag; neither is on by default.
+            Section {
+                Toggle("Still sky", isOn: $stillSky)
+                Toggle("Lighter glass in chats", isOn: $lightThreadGlass)
+            } header: { Text("Performance") } footer: {
+                Text("Still sky holds the scene in place. Lighter glass draws your messages and tool cards with a plain tint instead of live blur, so scrolling has less to redraw.")
             }
             // The Mac's sidebar holds every page: a switch each, arrows for the order.
             Section {

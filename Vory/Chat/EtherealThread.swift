@@ -97,7 +97,13 @@ extension View {
 
     /// The soft glass pill of the person's own message.
     func etherealPill(cornerRadius: CGFloat = 16) -> some View {
-        vibeGlass(RoundedRectangle(cornerRadius: cornerRadius, style: .continuous))
+        modifier(MessageGlass(shape: RoundedRectangle(cornerRadius: cornerRadius, style: .continuous), recipe: .vibe))
+    }
+
+    /// Glass on something inside the thread (a message pill, a tool card): a plain tinted fill instead when the
+    /// Mac's "Lighter glass in chats" is on, so scrolling does not re-blur every one of them each frame.
+    func threadGlass<S: InsettableShape>(_ shape: S) -> some View {
+        modifier(MessageGlass(shape: shape, recipe: .regular))
     }
 
     /// A small 22 pt control pill in the composer (model, effort, +).
@@ -324,3 +330,30 @@ struct WorkedLine: View {
     }
 }
 #endif
+
+/// VibeVory: the thread's glass, or a flat fill in its place (Settings › Appearance › Lighter glass in chats).
+struct MessageGlass<S: InsettableShape>: ViewModifier {
+    enum Recipe { case vibe, regular }
+    var shape: S
+    var recipe: Recipe
+    @AppStorage("vibe.lightThreadGlass") private var light = false
+
+    func body(content: Content) -> some View {
+        #if os(macOS)
+        if light {
+            content
+                .background(Color.white.opacity(0.09), in: shape)
+                .overlay(shape.strokeBorder(.white.opacity(0.16), lineWidth: 0.5).allowsHitTesting(false))
+        } else { glass(content) }
+        #else
+        glass(content)
+        #endif
+    }
+
+    @ViewBuilder private func glass(_ content: Content) -> some View {
+        switch recipe {
+        case .vibe: content.vibeGlass(shape)
+        case .regular: content.glassEffect(.regular, in: shape)
+        }
+    }
+}

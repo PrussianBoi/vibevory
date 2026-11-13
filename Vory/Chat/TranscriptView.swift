@@ -2091,7 +2091,7 @@ struct SubagentRow: View {
         }
         .font(.footnote)
         .padding(10)
-        .glassEffect(.regular, in: .rect(cornerRadius: 12))
+        .threadGlass(RoundedRectangle(cornerRadius: 12))
         .contentShape(.rect)
         .onTapGesture { if activity.summary?.isEmpty == false { withAnimation(.snappy) { open.toggle() } } }
         // The detail line changes as the helper reports in, without an animation of its own: one
@@ -2154,7 +2154,7 @@ struct InjectedNoteRow: View {
             .clipShape(.rect(cornerRadius: open ? 14 : 20))
             // Plain glass, not interactive: the button inside takes the tap, and interactive glass
             // on the wrapper hid that button from accessibility (and the UI test).
-            .glassEffect(.regular, in: .rect(cornerRadius: open ? 14 : 20))
+            .threadGlass(RoundedRectangle(cornerRadius: open ? 14 : 20))
             .frame(maxWidth: .infinity)
         }
         .padding(.vertical, 2)
