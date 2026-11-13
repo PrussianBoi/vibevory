@@ -694,11 +694,8 @@ private struct PageNav: View {
     var body: some View {
         VStack(spacing: 1) {
             NavRow(symbol: "square.and.pencil", title: "New chat", selected: false, shortcut: nil) {
-                // A fresh tab, and the same new chat ⌘N makes, opened in it.
-                ChatTabs.shared.newTab()
-                plugins.selected = nil
-                model.selectedTab = .chats
-                model.newChatRequest = UUID()
+                // VibeVory: the start page, as ⌘N opens it.
+                HermesActions.newSession(model)
             }
             ForEach(Array(tabs.filter { $0 != .chats && $0 != .dashboard }.enumerated()), id: \.element) { i, tab in
                 NavRow(symbol: tab.symbol, title: tab.title, selected: model.selectedTab == tab && plugins.selected == nil,
@@ -864,6 +861,14 @@ private struct StartPage: View {
     @Binding var path: NavigationPath
     @State private var text = ""
     @FocusState private var focused: Bool
+    /// VibeVory: a draft chat behind the model and effort chips. Picks land on it (nothing reaches the
+    /// gateway) and the chat the page starts takes them before its first message, as the New Chat sheet's do.
+    @State private var draft: ChatSession?
+
+    private var draftKey: String {
+        guard let rt = model.runtime else { return "" }
+        return "\(ObjectIdentifier(rt).hashValue)|\(rt.selectedProfile ?? "")"
+    }
 
     private static let suggestions = ["Check my inbox", "Summarize yesterday", "Plan today"]
 
@@ -908,6 +913,14 @@ private struct StartPage: View {
         }
         .toolbarBackgroundVisibility(.hidden, for: .windowToolbar)
         .onAppear { focused = true }
+        // Shown again (New chat, a chat closed): straight to typing.
+        .onChange(of: shown) { _, on in if on { focused = true } }
+        .task(id: draftKey) {
+            guard let rt = model.runtime else { draft = nil; return }
+            let d = ChatSession.draft(runtime: rt, profile: rt.selectedProfile)
+            draft = d
+            await d.warmModelOptions()
+        }
     }
 
     private var composer: some View {
@@ -919,10 +932,14 @@ private struct StartPage: View {
                 .focused($focused)
                 .onSubmit(send)
             HStack(spacing: 6) {
-                Text(model.runtime?.profiles.first { $0.name == (model.runtime?.selectedProfile ?? "default") }?.model ?? "Hermes")
-                    .font(.system(size: 11)).foregroundStyle(.white.opacity(0.58)).lineLimit(1)
-                    .padding(.horizontal, 9).frame(height: 22)
-                    .background(.white.opacity(0.06), in: .capsule)
+                if let draft {
+                    StartModelChips(chat: draft)
+                } else {
+                    Text(model.runtime?.profiles.first { $0.name == (model.runtime?.selectedProfile ?? "default") }?.model ?? "Hermes")
+                        .font(.system(size: 11)).foregroundStyle(.white.opacity(0.58)).lineLimit(1)
+                        .padding(.horizontal, 9).frame(height: 22)
+                        .background(.white.opacity(0.06), in: .capsule)
+                }
                 Spacer()
                 Button(action: send) {
                     Image(systemName: "arrow.up").font(.system(size: 11, weight: .bold))
@@ -946,6 +963,49 @@ private struct StartPage: View {
         guard !t.isEmpty else { return }
         text = ""
         let profile = model.runtime?.selectedProfile
-        ChatNavigation.select(ChatRoute(storedID: nil, title: nil, profile: profile, initialText: t), in: &path)
+        ChatNavigation.select(ChatRoute(storedID: nil, title: nil, profile: profile, initialText: t,
+                                        initialModel: draft?.pendingModel, initialReasoning: draft?.pendingReasoning), in: &path)
+    }
+}
+
+/// VibeVory: the start page's model and effort pills, the chat composer's two menus on a draft chat.
+private struct StartModelChips: View {
+    @Bindable var chat: ChatSession
+    @State private var modelHovered = false
+    @State private var effortHovered = false
+
+    var body: some View {
+        HStack(spacing: 6) {
+            Menu { ModelMenuContent(chat: chat) } label: {
+                HStack(spacing: 4) {
+                    Text(chat.modelName.isEmpty ? "Model" : ComposerView.shortModel(chat.modelName)).lineLimit(1).truncationMode(.middle)
+                    Image(systemName: "chevron.down").font(.system(size: 7, weight: .semibold))
+                }
+                .etherealControlPill(hovered: modelHovered)
+                .contentShape(.capsule)
+            }
+            .menuOrder(.fixed).menuIndicator(.hidden).buttonStyle(.plain).fixedSize()
+            .onHover { modelHovered = $0 }
+            .accessibilityLabel("Model \(chat.modelName.isEmpty ? "not set" : chat.modelName)")
+            Menu {
+                ForEach(ReasoningEffort.levels(offered: nil), id: \.self) { level in
+                    Button {
+                        Task { try? await chat.setReasoning(level) }
+                    } label: {
+                        if chat.reasoningEffort == level { MenuLabel(ReasoningEffort.name(of: level), systemImage: "checkmark") } else { Text(ReasoningEffort.name(of: level)) }
+                    }
+                }
+            } label: {
+                HStack(spacing: 4) {
+                    Text(ComposerView.effortLabel(chat.reasoningEffort)).lineLimit(1)
+                    Image(systemName: "chevron.down").font(.system(size: 7, weight: .semibold))
+                }
+                .etherealControlPill(hovered: effortHovered)
+                .contentShape(.capsule)
+            }
+            .menuOrder(.fixed).menuIndicator(.hidden).buttonStyle(.plain).fixedSize()
+            .onHover { effortHovered = $0 }
+            .accessibilityLabel("Reasoning \(ComposerView.effortLabel(chat.reasoningEffort))")
+        }
     }
 }

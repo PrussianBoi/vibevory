@@ -424,9 +424,11 @@ enum HermesActions {
     static func newSession(_ model: AppModel) {
         PluginHost.shared.selected = nil
         DesktopPages.shared.selected = nil
-        ChatTabs.shared.newTab()
+        // VibeVory: a new chat is the start page (greeting, model, composer), in a fresh tab, or the
+        // empty tab already open. The chat itself starts with the first message sent there.
+        let tabs = ChatTabs.shared
+        if tabs.current?.route != nil { tabs.newTab() }
         model.selectedTab = .chats
-        model.newChatRequest = UUID()
     }
 
     static func open(_ page: DesktopPage, _ model: AppModel) {

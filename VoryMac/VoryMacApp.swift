@@ -148,7 +148,7 @@ struct VoryMacApp: App {
             ImportFromDevicesCommands()
             CommandMenu("Chat") {
                 // ⌘N is New Task while the Board is in front (the Board menu has it there).
-                Button("New Chat") { model.selectedTab = .chats; model.newChatRequest = UUID() }
+                Button("New Chat") { HermesActions.newSession(model) }
                     .keyboardShortcut("n", modifiers: .command)
                     .disabled(model.runtime == nil || boardInFront)
                 Button("New Chat With…") { model.selectedTab = .chats; model.newChatSheetRequest = UUID() }
