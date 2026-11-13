@@ -110,6 +110,12 @@ struct TranscriptView: View {
     /// has set it: it moves only while the thread rests at its end. `TranscriptRowModel.split`
     /// says when it is not used.
     @State private var tailFrom: Int?
+    #if os(macOS)
+    /// VibeVory: how many of the older rows are drawn; the rest wait behind "Earlier messages". A long chat laid out
+    /// whole was the scroll lag that was left: the lazy stack guessed at hundreds of rows it had not drawn.
+    @State private var olderShown = Self.olderPage
+    static let olderPage = 60
+    #endif
     @State private var overscrollTask: Task<Void, Never>?
     /// When the keyboard last moved: its own spring carries a stuck thread to the end, so a
     /// small overshoot is not landed against it.
@@ -540,7 +546,25 @@ extension TranscriptView {
             // changed: a token landing in the reply at the end used to re-evaluate every row
             // the lazy stack had drawn, which with a long history was most of a core for the
             // whole reply (the Mac's "beachball on send"). Now a token touches the tail only.
+            #if os(macOS)
+            let older = rowCache.older(than: split)
+            let hidden = max(0, older.count - olderShown)
+            if hidden > 0 {
+                Button { olderShown += 100 } label: {
+                    Text("Earlier messages").font(.system(size: 11.5, weight: .medium)).foregroundStyle(Ethereal.dim)
+                        .padding(.horizontal, 12).frame(height: 26)
+                        .background(Color.white.opacity(0.07), in: .capsule)
+                        .contentShape(.capsule)
+                }
+                .buttonStyle(.plain)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 6)
+                .accessibilityIdentifier("thread.earlier")
+            }
+            OlderRows(rows: hidden > 0 ? Array(older[hidden...]) : older, context: ctx.forOlderRows(tail: all[split...])).equatable()
+            #else
             OlderRows(rows: rowCache.older(than: split), context: ctx.forOlderRows(tail: all[split...])).equatable()
+            #endif
         }
         let entering = Self.enteringRowID(all, opening: settling || chat.isResuming)
         ForEach(Array(all[split...])) { row in ctx.rowView(row, entering: row.id == entering) }
