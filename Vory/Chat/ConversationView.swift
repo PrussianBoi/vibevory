@@ -286,7 +286,10 @@ struct ConversationView: View {
             // With no toolbar strip the thread runs up under the bot's pill and the window's edge
             // at full strength, as on the phone (Matt, 2026-10-10: "remove the fades on the Mac
             // too"); the 68 pt top fade mask that used to soften it is gone.
-            .safeAreaInset(edge: .bottom, spacing: 0) {
+            // VibeVory: an overlay, not a safe-area inset. The inset didn't reach the thread as the composer grew
+            // (each Shift-Return): the thread's end stayed behind the composer and a scroll down bounced off it.
+            // The thread now keeps its end above the dock's measured height itself (`fallbackInset`).
+            .overlay(alignment: .bottom) {
                 // VibeVory: the composer floats as wide as the reading column (the dock's own 12 pt sides added),
                 // about 22 pt above the window's bottom edge.
                 dock(chat).frame(maxWidth: ChatStyle.readingColumn + 24).frame(maxWidth: .infinity)
@@ -477,8 +480,8 @@ struct ConversationView: View {
     // it they tipped the type checker over its limit.
     private func thread(_ chat: ChatSession) -> some View {
         #if os(macOS)
-        // The dock is a bottom inset on the Mac: the thread needs no margins of its own.
-        let (dockTopArg, fallback, top, fade): (CGFloat, CGFloat, CGFloat, CGFloat) = (0, 0, 0, 0)
+        // VibeVory: the dock floats over the thread on the Mac; the thread keeps its end above the dock's measured height.
+        let (dockTopArg, fallback, top, fade): (CGFloat, CGFloat, CGFloat, CGFloat) = (0, dockHeight + 22 - BottomDock.bottomPadding, 0, 0)
         #else
         // Until the header has been measured, its default height plus the status bar's usual share.
         let (dockTopArg, fallback, top, fade) = (dockTop, dockHeight + windowGeometry.keyboardOverlap, headerHeight + windowGeometry.safeArea.top, ChatStyle.bandFade)
