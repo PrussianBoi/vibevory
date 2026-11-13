@@ -473,7 +473,7 @@ struct TranscriptView: View {
                 #if os(macOS)
                 // VibeVory: a chat already loaded (switching chats or tabs) was shown while the lazy stack measured its
                 // rows and scrolled itself to the end in sight; it lands out of sight too, 600 ms at most.
-                else if !chat.isResuming, rows.count >= 8 { landingOutOfSight = true; capLanding(after: 600) }
+                if !chat.isResuming, rows.count >= 8 { landingOutOfSight = true; capLanding(after: 600) }
                 #endif
             }
             .onChange(of: chat.isResuming) { _, now in
