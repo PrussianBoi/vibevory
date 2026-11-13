@@ -1040,17 +1040,10 @@ private struct OlderRows: View, Equatable {
     static func == (a: OlderRows, b: OlderRows) -> Bool { a.context == b.context && a.rows == b.rows }
 
     var body: some View {
-        #if os(macOS)
-        // VibeVory: the Mac draws a window of the older rows only (TranscriptView.olderShown), so they are laid out
-        // whole: no guessed heights, so nothing jumps as rows scroll into view.
-        VStack(alignment: .leading, spacing: 10) {
-            ForEach(rows) { row in context.rowView(row) }
-        }
-        #else
+        // Lazy on the Mac too: laid out whole, even a 60-row window froze a long chat as it opened (build 57).
         LazyVStack(alignment: .leading, spacing: 10) {
             ForEach(rows) { row in context.rowView(row) }
         }
-        #endif
     }
 }
 
