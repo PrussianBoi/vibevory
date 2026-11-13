@@ -219,6 +219,7 @@ public final class RememberedSignInVault {
         #if DEBUG
         if Keychain.memoryOnly { return RememberedSignInVault(backend: MemoryRememberedSignInBackend()) }
         #endif
+        if let vault = FileVault.shared { return RememberedSignInVault(backend: FileRememberedSignInBackend(vault: vault), defaults: .standard) }
         return RememberedSignInVault(backend: KeychainRememberedSignInBackend(), defaults: .standard)
     }
 
@@ -264,4 +265,16 @@ public final class RememberedSignInVault {
         if pendingForgets.isEmpty { defaults?.removeObject(forKey: Self.pendingForgetsKey) }
         else { defaults?.set(pendingForgets.map(\.uuidString).sorted(), forKey: Self.pendingForgetsKey) }
     }
+}
+
+/// Remembered sign-ins in the Mac build's file vault (see `FileVault`): the data-protection
+/// keychain refuses a build with no Apple team, and the login keychain asks again on every update.
+public final class FileRememberedSignInBackend: RememberedSignInBackend {
+    private let vault: FileVault
+    private static let prefix = "remembered:"
+    public init(vault: FileVault) { self.vault = vault }
+    public func write(_ data: Data, account: String) throws { try vault.write(data, key: Self.prefix + account) }
+    public func read(account: String, context: LAContext?) throws -> Data? { vault.read(key: Self.prefix + account) }
+    @discardableResult public func delete(account: String) -> Bool { vault.delete(key: Self.prefix + account) }
+    public func accounts() -> [String]? { vault.keys(prefix: Self.prefix) }
 }
