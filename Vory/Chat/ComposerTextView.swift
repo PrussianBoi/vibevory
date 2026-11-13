@@ -168,6 +168,12 @@ struct ComposerTextView: View {
                 }
                 if press.phase == .repeat { return modifiers.contains(.option) ? .ignored : .handled }
                 if modifiers.isEmpty, onReturn() { return .handled }
+                // VibeVory: a bare Return sends here, not through the field's submit. The submit ended the field's
+                // editing and took it up again with all of its text selected, which showed until the send cleared it.
+                if modifiers.isEmpty {
+                    if !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty { onSend() }
+                    return .handled
+                }
                 return .ignored
             }
             // Tab and Escape are the chooser's only while it is open; Tab moves the focus otherwise.
