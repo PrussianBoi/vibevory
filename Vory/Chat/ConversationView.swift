@@ -298,6 +298,9 @@ struct ConversationView: View {
                 // VibeVory: keeps the buttons at the window's right edge (with the bot's pill out of
                 // the toolbar they slid in beside the tabs).
                 ToolbarSpacer(.flexible)
+                // Settings and Layout, in the same top-right group as the mic and the menu.
+                ToolbarItem(placement: .primaryAction) { TitleBarTrailing() }
+                    .sharedBackgroundVisibility(.hidden)
                 // The whole conversation by voice, in its own small window.
                 ToolbarItem(placement: .primaryAction) {
                     let on = HandsFreeSession.shared.isActive(for: chat)

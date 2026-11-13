@@ -178,6 +178,8 @@ private struct TabPill: View {
 /// The chat tabs in the window's title bar, where Hermes Desktop has them, in place of the title.
 /// Only while the Chats page is on show: it stays mounted behind the other pages.
 struct ChatTabsChrome: ViewModifier {
+    /// False in a conversation: its own toolbar puts Settings and Layout beside the mic and the menu.
+    var trailing = true
     @Environment(\.macPageShown) private var pageShown
 
     func body(content: Content) -> some View {
@@ -191,8 +193,11 @@ struct ChatTabsChrome: ViewModifier {
                         }
                     }
                     .sharedBackgroundVisibility(.hidden)
-                    ToolbarItem(placement: .primaryAction) { TitleBarTrailing() }
-                        .sharedBackgroundVisibility(.hidden)
+                    if trailing {
+                        ToolbarSpacer(.flexible)
+                        ToolbarItem(placement: .primaryAction) { TitleBarTrailing() }
+                            .sharedBackgroundVisibility(.hidden)
+                    }
                 }
             }
             .toolbar(removing: .title)
