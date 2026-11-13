@@ -479,7 +479,7 @@ struct TranscriptView: View {
                 #if os(macOS)
                 // VibeVory: a chat already loaded (switching chats or tabs) was shown while the lazy stack measured its
                 // rows and scrolled itself to the end in sight; it lands out of sight too, 600 ms at most.
-                if !chat.isResuming, rows.count >= 8 { landingOutOfSight = true; capLanding(after: 600) }
+                if !chat.isResuming, rows.count >= 8 { landingOutOfSight = true; capLanding(after: 250) }
                 #endif
             }
             .onChange(of: chat.isResuming) { _, now in
@@ -489,6 +489,10 @@ struct TranscriptView: View {
             }
             // The thread's place after a layout switch rebuilt it: the distance from the end it
             // had (`ChatViewMemory`), put back once the content is laid out; at the end, nothing.
+            #if os(macOS)
+            // A thread taken away mid-scroll must not leave the sky held.
+            .onDisappear { if SkyHold.shared.scrolling { SkyHold.shared.scrolling = false } }
+            #endif
             .onDisappear { ChatViewMemory.setDistanceFromEnd(metrics.stickToBottom || metrics.distanceFromBottom < 24 ? nil : metrics.distanceFromBottom, for: chat) }
             .task { await restoreDistanceFromEnd() }
             // The names "@" can mean: the gateway's bots (name and label) and the person's own.
@@ -1036,9 +1040,17 @@ private struct OlderRows: View, Equatable {
     static func == (a: OlderRows, b: OlderRows) -> Bool { a.context == b.context && a.rows == b.rows }
 
     var body: some View {
+        #if os(macOS)
+        // VibeVory: the Mac draws a window of the older rows only (TranscriptView.olderShown), so they are laid out
+        // whole: no guessed heights, so nothing jumps as rows scroll into view.
+        VStack(alignment: .leading, spacing: 10) {
+            ForEach(rows) { row in context.rowView(row) }
+        }
+        #else
         LazyVStack(alignment: .leading, spacing: 10) {
             ForEach(rows) { row in context.rowView(row) }
         }
+        #endif
     }
 }
 
