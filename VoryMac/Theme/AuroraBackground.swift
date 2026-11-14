@@ -34,6 +34,7 @@ enum SkyScene: String, CaseIterable, Identifiable {
 /// One drawn layer of a sky: its shader, how much smaller than the window it is drawn, its frame rate, and
 /// whether it adds its light onto the layers below (stars on black) instead of covering them.
 struct SkyLayer {
+    var downscale: CGFloat = 3
     var fps: Double = 20
     var adds = false
     /// size of the drawn layer, pixels per layer point, window points per layer point, seconds
