@@ -7,6 +7,9 @@ struct SettingsView: View {
     /// The first-run "set up notifications" card: shown once, until it is tapped or dismissed.
     @AppStorage("notificationsSetupCardDone") private var setupCardDone = false
     @State private var search = ""
+    #if DEBUG
+    @State private var debugPage: String?
+    #endif
 
     private struct Row: Identifiable { let id: String; let title: String; let symbol: String; let color: Color; let destination: AnyView }
 
@@ -163,6 +166,19 @@ struct SettingsView: View {
             .tabRoot(.settings)
             .background(InteractivePopEnabler())
             .pageSearchable(text: $search, prompt: "Search settings")
+            #if DEBUG
+            // CI screenshots: `-vibe-settings-page <row id>` opens that page.
+            .navigationDestination(item: $debugPage) { id in
+                if let row = (hermesRows + appRows).first(where: { $0.id == id }) { row.destination.untitledPage() }
+            }
+            .task {
+                let args = ProcessInfo.processInfo.arguments
+                if let i = args.firstIndex(of: "-vibe-settings-page"), args.indices.contains(i + 1) {
+                    try? await Task.sleep(for: .seconds(2))
+                    debugPage = args[i + 1]
+                }
+            }
+            #endif
         }
     }
 }
