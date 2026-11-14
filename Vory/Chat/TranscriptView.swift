@@ -461,7 +461,10 @@ struct TranscriptView: View {
             // so the tapped card stays where it is and the rows below glide (#437).
             .defaultScrollAnchor(.bottom, for: .initialOffset)
             .defaultScrollAnchor(.bottom, for: .alignment)
-            .defaultScrollAnchor(awayFromBottom ? .top : (holdingCard ? .top : .bottom), for: .sizeChanges)
+            // Up the thread, size changes keep the top only while a reply is writing below (so the reader stays put as it
+            // grows). At rest they keep the bottom: scrolling up makes the lazy stack measure rows above the reader, and
+            // with the top kept each corrected height shifted the rows on screen ("it glitches me back down a bit").
+            .defaultScrollAnchor((awayFromBottom && chat.isRunning) || holdingCard ? .top : .bottom, for: .sizeChanges)
             // Streaming text, and the tokens/sec footer landing after it, follow by the anchor for
             // size changes (`.defaultScrollAnchor(.bottom)` above), with no scroll asked per token:
             // that write ran the transcript's body a second time on every token. A new message
