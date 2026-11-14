@@ -101,6 +101,11 @@ jobs:
           shot 10-welcome "-vory-show-welcome" 20
           shot 11-connect "-vory-show-welcome -vibe-open-connect" 20
           shot 08-glass-lab "-vibe-glass-lab" 20
+          defaults write com.vorantx.vory.demo vibe.skyScene milkyWay
+          shot 12-sky-milkyway "-vibe-open-chat 20260921_154212_a1b2c3" 25
+          defaults write com.vorantx.vory.demo vibe.skyScene nebula
+          shot 13-sky-nebula "-vibe-open-chat 20260921_154212_a1b2c3" 25
+          defaults delete com.vorantx.vory.demo vibe.skyScene || true
           ls -la shots
           mkdir -p crash; cp ~/Library/Logs/DiagnosticReports/*.ips crash/ 2>/dev/null || true
           find "$TMPDIR" /var/folders -name vibe-plugin-snapshot.png -exec cp {} shots/ \; 2>/dev/null || true
