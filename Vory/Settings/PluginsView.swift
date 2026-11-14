@@ -97,11 +97,20 @@ struct PluginsView: View {
     @ViewBuilder private var installSection: some View {
         Section {
             HStack(spacing: 10) {
-                TextField("Catalog name or GitHub link", text: $query)
+                TextField("Plugin", text: $query, prompt: Text("Catalog name or GitHub link"))
+                    .labelsHidden()
                     .textFieldStyle(.plain)
+                    .multilineTextAlignment(.leading)
                     .autocorrectionDisabled()
                     #if os(iOS)
                     .textInputAutocapitalization(.never)
+                    #else
+                    // A field in a dark rounded box, as on the connect card; a Mac form would draw it as a row.
+                    .font(.system(size: 13))
+                    .padding(.horizontal, 11).frame(height: 32)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .background(.black.opacity(0.16), in: .rect(cornerRadius: 9, style: .continuous))
+                    .overlay(RoundedRectangle(cornerRadius: 9, style: .continuous).strokeBorder(.white.opacity(0.16), lineWidth: 0.5))
                     #endif
                     .onSubmit { install() }
                     .accessibilityIdentifier("plugins.install.field")
@@ -161,7 +170,7 @@ struct PluginsView: View {
                 }
                 Text([e.maintainer, [e.version, e.shaShort].compactMap { $0?.isEmpty == false ? $0 : nil }.joined(separator: " @ ")].compactMap { $0?.isEmpty == false ? $0 : nil }.joined(separator: " · "))
                     .font(.caption).foregroundStyle(.secondary)
-                Text(e.summary).font(.callout).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+                Text(e.summary).font(.callout).foregroundStyle(.secondary).lineLimit(2)
                 Text(parts(e)).font(.caption).foregroundStyle(.secondary)
             }
         }
