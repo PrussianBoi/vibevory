@@ -929,20 +929,13 @@ def rest(path: str, query: dict) -> tuple[int, object] | None:
                                 "total_estimated_cost": tot("estimated_cost"), "total_actual_cost": 0, "total_sessions": tot("sessions"), "total_api_calls": tot("api_calls")},
                      "skills": {}, "tools": {}}
     if base == "/api/dashboard/plugins/hub":
-        return 200, {"plugins": [
-            {"name": "vory-push", "version": "1.0.33", "description": "Vory's companion: push notifications, Live Activities and the Bot Chat watch.",
-             "source": "user", "runtime_status": "enabled", "has_dashboard_manifest": False, "path": "/home/hermes/.hermes/plugins/vory-push",
-             "can_remove": True, "can_update_git": False, "auth_required": False, "user_hidden": False},
-            {"name": "kanban", "version": "0.4.2", "description": "A board of the agent's tasks on the dashboard.",
-             "source": "bundled", "runtime_status": "bundled", "has_dashboard_manifest": True, "path": "/opt/hermes/plugins/kanban",
-             "can_remove": False, "can_update_git": False, "auth_required": False, "user_hidden": False},
-            {"name": "memory-sqlite", "version": "0.9.0", "description": "Long-term memory in a local SQLite file.",
-             "source": "user", "runtime_status": "disabled", "has_dashboard_manifest": False, "path": "/home/hermes/.hermes/plugins/memory-sqlite",
-             "can_remove": True, "can_update_git": False, "auth_required": False, "user_hidden": False},
-            {"name": "github", "version": "2.1.0", "description": "Pull requests, issues and reviews through the GitHub API.",
-             "source": "user", "runtime_status": "enabled", "has_dashboard_manifest": False, "path": "/home/hermes/.hermes/plugins/github",
-             "can_remove": True, "can_update_git": True, "auth_required": True, "auth_command": "hermes plugins auth github", "user_hidden": False},
-        ], "orphan_dashboard_plugins": [], "providers": {"memory_provider": "memory-sqlite", "memory_options": [], "context_engine": "default", "context_options": []}}
+        return 200, {"plugins": MOCK_PLUGINS, "orphan_dashboard_plugins": [],
+                     "providers": {"memory_provider": "memory-sqlite", "memory_options": [], "context_engine": "default", "context_options": []}}
+    if base == "/api/dashboard/plugins/catalog":
+        names = {p["name"] for p in MOCK_PLUGINS}
+        return 200, {"entries": [{**e, "sha_short": e["sha"][:7], "installed": e["name"] in names, "installed_sha": None,
+                                  "update_available": False, "runtime_status": None} for e in MOCK_CATALOG],
+                     "removed": [], "generated_at": "2026-11-14T00:00:00Z"}
     if base == "/api/env":
         return 200, ENV_VARS
     if base == "/api/tools/toolsets":
@@ -1000,6 +993,58 @@ PROFILE_RENAMES: list[dict] = []
 # --companion-restart, only once a gateway restart asked after the upload has run 4 s.
 COMPANION: dict = {"version": None, "restart": False, "files": {}, "uploaded_at": None}
 COMPANION_OLD_SCRIPT = b"# vory-push companion: an older build, as the mock serves it\n"
+# ── Plugins (Settings › Plugins: the hub, the curated catalog, install / enable / remove) ──────
+MOCK_PLUGINS = [
+    {"name": "vory-push", "version": "1.0.33", "description": "Vory's companion: push notifications, Live Activities and the Bot Chat watch.",
+     "source": "user", "runtime_status": "enabled", "has_dashboard_manifest": False, "path": "/home/hermes/.hermes/plugins/vory-push",
+     "can_remove": True, "can_update_git": False, "auth_required": False, "user_hidden": False},
+    {"name": "kanban", "version": "0.4.2", "description": "A board of the agent's tasks on the dashboard.",
+     "source": "bundled", "runtime_status": "bundled", "has_dashboard_manifest": True, "path": "/opt/hermes/plugins/kanban",
+     "can_remove": False, "can_update_git": False, "auth_required": False, "user_hidden": False},
+    {"name": "memory-sqlite", "version": "0.9.0", "description": "Long-term memory in a local SQLite file.",
+     "source": "user", "runtime_status": "disabled", "has_dashboard_manifest": False, "path": "/home/hermes/.hermes/plugins/memory-sqlite",
+     "can_remove": True, "can_update_git": False, "auth_required": False, "user_hidden": False},
+    {"name": "github", "version": "2.1.0", "description": "Pull requests, issues and reviews through the GitHub API.",
+     "source": "user", "runtime_status": "enabled", "has_dashboard_manifest": False, "path": "/home/hermes/.hermes/plugins/github",
+     "can_remove": True, "can_update_git": True, "auth_required": True, "auth_command": "hermes plugins auth github", "user_hidden": False},
+]
+MOCK_PLUGINS.insert(1, {"name": "workflows", "version": "0.6.0", "description": "Multi-step workflows the agent plans and runs, with a Desktop page.",
+                        "source": "user", "runtime_status": "enabled", "has_dashboard_manifest": True, "path": "/home/hermes/.hermes/plugins/workflows",
+                        "can_remove": True, "can_update_git": True, "auth_required": False, "user_hidden": False})
+# Real entries from hermes-agent's plugin-catalog/ (2026-11-14).
+MOCK_CATALOG = [{"name": "spotify", "repo": "https://github.com/NousResearch/hermes-official-plugins", "sha": "4d492b1dc5326af3e38bb2cf3e4b9ad6d65f0072", "subdir": "spotify", "description": "Spotify for Hermes: seven tools (playback, devices, queue, search, playlists, albums, library) over the Spotify Web API, plus `hermes spotify login|status|logout` (loopback PKCE with your own Spotify developer app; Premium needed for playback control). Formerly built into Hermes core; existing users are migrated automatically.", "maintainer": "NousResearch", "tier": "official", "category": "tools", "version": "2.1.0", "title": "", "capabilities": {"provides_tools": ["spotify_playback", "spotify_devices", "spotify_queue", "spotify_search", "spotify_playlists", "spotify_albums", "spotify_library"], "provides_hooks": [], "provides_middleware": [], "requires_env": []}}, {"name": "hermes-memory-wiki", "repo": "https://github.com/NousResearch/hermes-official-plugins", "sha": "abec9e822a23089943dd1d476a104bf746f19f86", "subdir": "memory-wiki", "description": "Memory Wiki dashboard tab: browsable subject pages and daily logs derived from local session history, plus a read-only Persistent Memory (MEMORY.md / USER.md) audit panel.", "maintainer": "NousResearch", "tier": "official", "category": "", "version": "", "title": "", "capabilities": {"provides_tools": [], "provides_hooks": [], "provides_middleware": [], "requires_env": []}}, {"name": "homeassistant", "repo": "https://github.com/NousResearch/hermes-official-plugins", "sha": "4d492b1dc5326af3e38bb2cf3e4b9ad6d65f0072", "subdir": "homeassistant", "description": "Home Assistant gateway platform (state-change events in, persistent notifications and cron notify delivery out) plus the homeassistant toolset (ha_list_entities, ha_get_state, ha_list_services, ha_call_service). Formerly built into Hermes core; existing users are migrated automatically.", "maintainer": "NousResearch", "tier": "official", "category": "platform", "version": "2.0.1", "title": "", "capabilities": {"provides_tools": ["ha_list_entities", "ha_get_state", "ha_list_services", "ha_call_service"], "provides_hooks": [], "provides_middleware": [], "requires_env": ["HASS_TOKEN"]}}, {"name": "brave-search", "repo": "https://github.com/rabilrbl/hermes-brave-search-plugin", "sha": "4134cbef910c14c63e6b284b0820b30f3811ab47", "subdir": "", "description": "Brave Search API tools for live web search inside Hermes", "maintainer": "rabilrbl", "tier": "community", "category": "web", "version": "", "title": "", "capabilities": {"provides_tools": ["brave_web_search"], "provides_hooks": [], "provides_middleware": [], "requires_env": ["name"]}}, {"name": "langfuse", "repo": "https://github.com/NousResearch/hermes-official-plugins", "sha": "c2a95963c442f3f23e4bc6fe0da898e1dd1fb63d", "subdir": "langfuse", "description": "Langfuse observability for Hermes: one trace per turn, one generation per LLM call (usage and cost from Hermes' own pricing, cache and reasoning tokens included), one observation per tool call and subagent. Content capture is sanitized by default (metadata-only and full are opt-in); sends traces only to the Langfuse project whose keys you set. Formerly built into Hermes core as observability/langfuse; existing users are migrated automatically.", "maintainer": "NousResearch", "tier": "official", "category": "general", "version": "2.0.0", "title": "", "capabilities": {"provides_tools": [], "provides_hooks": ["pre_api_request", "post_api_request", "api_request_error", "pre_llm_call", "post_llm_call", "pre_tool_call", "post_tool_call", "on_session_finalize", "on_session_end", "subagent_start", "subagent_stop"], "provides_middleware": [], "requires_env": ["HERMES_LANGFUSE_PUBLIC_KEY", "HERMES_LANGFUSE_SECRET_KEY"]}}]
+
+
+def plugins_rest(method, base, body):
+    """POST /api/dashboard/agent-plugins/install, …/<name>/enable|disable, DELETE …/<name>."""
+    if method == "POST" and base == "/api/dashboard/agent-plugins/install":
+        name = (body.get("catalog_name") or "").strip() or (body.get("identifier") or "").rstrip("/").split("/")[-1].removesuffix(".git")
+        entry = next((e for e in MOCK_CATALOG if e["name"] == name), None)
+        if not name:
+            return 400, {"detail": "Provide an identifier or a catalog_name."}
+        if not any(p["name"] == name for p in MOCK_PLUGINS):
+            MOCK_PLUGINS.append({"name": name, "version": (entry or {}).get("version") or "0.1.0",
+                                 "description": (entry or {}).get("description", ""), "source": "user", "runtime_status": "enabled",
+                                 "has_dashboard_manifest": False, "path": f"/home/hermes/.hermes/plugins/{name}",
+                                 "can_remove": True, "can_update_git": True, "auth_required": False, "user_hidden": False})
+        missing = (entry or {}).get("capabilities", {}).get("requires_env", [])
+        return 200, {"ok": True, "plugin_name": name, "warnings": [], "python_dependencies": [], "missing_env": missing,
+                     "enabled": True, "gateway_reloaded": True, "activation": None, "restart_required": False, "known_issues": []}
+    m = re.fullmatch(r"/api/dashboard/agent-plugins/(.+?)(?:/(enable|disable))?", base)
+    if not m:
+        return None
+    plugin = next((p for p in MOCK_PLUGINS if p["name"] == m.group(1)), None)
+    if plugin is None:
+        return 400, {"detail": f"No plugin named {m.group(1)}."}
+    if method == "POST" and m.group(2):
+        plugin["runtime_status"] = "enabled" if m.group(2) == "enable" else "disabled"
+        return 200, {"ok": True}
+    if method == "DELETE" and not m.group(2):
+        MOCK_PLUGINS.remove(plugin)
+        return 200, {"ok": True}
+    return None
+
+
 COMPANION_FILES = ("/plugins/vory-push/plugin.yaml", "/plugins/vory-push/hermes_push.py", "/plugins/vory-push/__init__.py",
                    "/push/status.json")
 
@@ -2120,6 +2165,8 @@ def _process_request(connection, request):
         result = auth
     elif method == "GET" and base == "/api/files/download":
         return files_download(query)
+    elif base.startswith("/api/dashboard/agent-plugins") and (plug := plugins_rest(method, base, body_json if isinstance(body_json, dict) else {})) is not None:
+        result = plug
     elif base.startswith("/api/plugins/workflows/") and workflows_rest(method, base, body_json) is not None:
         result = (200, workflows_rest(method, base, body_json if isinstance(body_json, dict) else {}))
     elif base.startswith("/api/plugins/kanban/") or base.startswith("/api/audio/"):

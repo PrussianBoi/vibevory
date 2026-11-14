@@ -87,6 +87,14 @@ final class PluginHost {
         mountSelected()
     }
 
+    /// Loads the disk plugins again (one was added or removed), for the same gateway.
+    func reload() {
+        let rt = runtime
+        runtime = nil
+        stop()
+        attach(rt)
+    }
+
     /// Shows a plugin page.
     func open(_ page: Page) {
         selected = page.id
