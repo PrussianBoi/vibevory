@@ -424,15 +424,9 @@ struct ConversationView: View {
             // or a swipe from a Bot Chat opened over it): another new chat then took the place of the one written in,
             // blank, which stayed only in the list (#450).
             else if chat == nil {
-                let fresh = try await runtime.newChat(cwd: route.cwd)
-                // The compose sheet's model and reasoning level (#27), set before the chat shows
-                // and before its first message goes, so that message runs on them.
-                if let m = route.initialModel {
-                    do { try await fresh.setModel(provider: m.provider, model: m.model) } catch { fresh.banner = error.localizedDescription }
-                }
-                if let r = route.initialReasoning {
-                    do { try await fresh.setReasoning(r) } catch { fresh.banner = error.localizedDescription }
-                }
+                // The compose sheet's (or the Mac start page's) model and reasoning level (#27) go with the create,
+                // so the agent is built on them and the first message runs on them.
+                let fresh = try await runtime.newChat(cwd: route.cwd, model: route.initialModel, reasoning: route.initialReasoning)
                 chat = fresh
             }
             if let chat, composerText.isEmpty, let draft = ComposerDrafts.load(for: chat) { composerText = draft }

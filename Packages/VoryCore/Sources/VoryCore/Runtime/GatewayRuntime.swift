@@ -680,9 +680,9 @@ public final class GatewayRuntime {
     /// `cwd`: a folder on the gateway the chat works in, so it belongs to that project.
     /// `profile`: the bot the chat is with when it is not the selected one (the watch's choice,
     /// without switching the phone's list under the person).
-    public func newChat(cwd: String? = nil, profile: String? = nil) async throws -> ChatSession {
+    public func newChat(cwd: String? = nil, profile: String? = nil, model: ChatSession.ModelPick? = nil, reasoning: String? = nil) async throws -> ChatSession {
         let session = ChatSession(runtime: self, storedID: nil, title: nil, profile: profile)
-        try await session.create(cwd: cwd)
+        try await session.create(cwd: cwd, model: model, reasoning: reasoning)
         registry.add(session)
         return session
     }

@@ -542,11 +542,19 @@ public final class ChatSession: @MainActor Identifiable, ChatIdentity {
 
     // MARK: Lifecycle
 
-    public func create(cwd: String? = nil) async throws {
+    /// `model` and `reasoning`: a draft's picks, given to the create itself. Set after it, they lost a race: the
+    /// gateway starts building the chat's agent on create, and a pick made before the build finished was stored for
+    /// later while the first message ran on the bot's default.
+    public func create(cwd: String? = nil, model: ModelPick? = nil, reasoning: String? = nil) async throws {
         // No "cols": Hermes's canonical create (v0.23.0's session authority) refuses a key it doesn't declare, and the
         // legacy create takes the 80 it would have said by default (#665). session.resume still sends it.
         var params: [String: JSONValue] = [:]
         if let cwd, !cwd.isEmpty { params["cwd"] = .string(cwd); params["cwd_explicit"] = .bool(true) }
+        if let model, !model.model.isEmpty {
+            params["model"] = .string(model.model)
+            if let p = model.provider, !p.isEmpty { params["provider"] = .string(p) }
+        }
+        if let reasoning, !reasoning.isEmpty { params[runtime.sessionAuthority ? "reasoning" : "reasoning_effort"] = .string(reasoning) }
         let r = try await rpc("session.create", params)
         runtimeID = r["session_id"]?.stringValue ?? ""
         storedID = r["stored_session_id"]?.stringValue ?? runtimeID
