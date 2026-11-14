@@ -77,13 +77,25 @@ enum Ethereal {
     }
 }
 
+private struct VibeGlass<S: InsettableShape>: ViewModifier {
+    let shape: S
+    let tint: Color?
+    let frost: Double
+    let rim: Bool
+    @Environment(\.skyPalette) private var palette
+    func body(content: Content) -> some View {
+        content.glassEffect(.clear.tint(tint ?? palette.glass), in: shape)
+            .background(.ultraThinMaterial.opacity(frost), in: shape)
+            .overlay(shape.strokeBorder(.white.opacity(rim ? 0.16 : 0), lineWidth: 0.5).allowsHitTesting(false))
+    }
+}
+
 extension View {
     /// Glass recipe H, Dev's pick from the glass test (2026-11-12): clear Liquid Glass with a light
     /// frost underneath and a hairline rim. `frost` thickens it where text must stay readable.
-    func vibeGlass<S: InsettableShape>(_ shape: S, tint: Color = .white.opacity(0.03), frost: Double = 0.5, rim: Bool = true) -> some View {
-        glassEffect(.clear.tint(tint), in: shape)
-            .background(.ultraThinMaterial.opacity(frost), in: shape)
-            .overlay(shape.strokeBorder(.white.opacity(rim ? 0.16 : 0), lineWidth: 0.5).allowsHitTesting(false))
+    /// With no `tint`, the glass takes the sky's own tint (`SkyPalette.glass`).
+    func vibeGlass<S: InsettableShape>(_ shape: S, tint: Color? = nil, frost: Double = 0.5, rim: Bool = true) -> some View {
+        modifier(VibeGlass(shape: shape, tint: tint, frost: frost, rim: rim))
     }
 
     /// A reply's words on the Mac: 12.5 pt, airy, near-white.

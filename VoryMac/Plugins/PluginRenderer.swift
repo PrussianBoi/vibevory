@@ -418,7 +418,7 @@ enum PluginDraw {
         }
         let fillW = tw.fillW || (ctx.row && tw.grow) || (!ctx.row && ctx.stretch && block && tw.width == nil)
             || (tw.truncate && tw.width == nil && (tw.grow || !ctx.row))
-        let fillH = tw.fillH || (!ctx.row && tw.grow)
+        let fillH = tw.fillH || (!ctx.row && tw.grow) || (ctx.row && ctx.stretch && block && tw.height == nil)
         if fillW || fillH {
             v = AnyView(v.frame(maxWidth: fillW ? .infinity : nil, maxHeight: fillH ? .infinity : nil,
                                 alignment: Alignment(horizontal: tw.frameAlign.horizontal, vertical: .top)))
@@ -454,7 +454,10 @@ enum PluginDraw {
                 ForEach(kids) { k in node(k, in: inner) }
             })
         } else if (tw.flex && !tw.col) || n.type == "tr" || n.type == "label" && kids.count > 1 {
-            content = row(kids, tw: tw, ctx: PluginContext(row: true, text: ts, stretch: false, formSubmit: submit))
+            // A full-height row stretches its block children to its height (CSS's default align-items: stretch),
+            // so a page laid out as `flex h-full` (side list + main) keeps its main column at the top, not centred.
+            let tall = tw.align == nil && (tw.fillH || tw.height != nil || (!ctx.row && tw.grow))
+            content = row(kids, tw: tw, ctx: PluginContext(row: true, text: ts, stretch: tall, formSubmit: submit))
         } else {
             content = column(kids, tw: tw, ctx: inner)
         }
@@ -518,7 +521,7 @@ enum PluginDraw {
         if card {
             v = AnyView(v.vibeGlass(RoundedRectangle(cornerRadius: max(radius, 12), style: .continuous)))
         } else if tw.selectedBG {
-            v = AnyView(v.background(.white.opacity(0.1), in: RoundedRectangle(cornerRadius: max(radius, 8), style: .continuous)))
+            v = AnyView(v.background { SkySelectionFill(radius: max(radius, 8)) })
         } else if let bg = tw.bg {
             v = AnyView(v.background(bg.opacity(0.9), in: RoundedRectangle(cornerRadius: radius, style: .continuous)))
         } else if tw.border && radius == 0 {
@@ -609,6 +612,7 @@ enum PluginDraw {
 struct PluginButton: View {
     let node: PluginNode
     let ts: PluginTextStyle
+    @Environment(\.skyPalette) private var palette
 
     var body: some View {
         let variant = node.string("variant") ?? "default"
@@ -636,7 +640,8 @@ struct PluginButton: View {
     func labelStyle(_ variant: String) -> PluginTextStyle {
         var t = PluginTextStyle.base
         t.size = 11.5; t.weight = .medium
-        t.color = variant == "destructive" ? Color(red: 1, green: 0.62, blue: 0.62) : .white.opacity(0.92)
+        let primary = !["ghost", "link", "textStrong", "text", "outline", "destructive", "secondary"].contains(variant)
+        t.color = variant == "destructive" ? Color(red: 1, green: 0.62, blue: 0.62) : primary ? palette.onAccent : .white.opacity(0.92)
         return t
     }
 }
@@ -652,11 +657,13 @@ private struct PluginButtonFace: View {
     let configuration: ButtonStyleConfiguration
     let variant: String
     @Environment(\.isEnabled) private var enabled
+    @Environment(\.skyPalette) private var palette
     @State private var hovered = false
 
     var body: some View {
+        let primary = !["ghost", "link", "textStrong", "text", "outline", "destructive", "secondary"].contains(variant)
         let label = configuration.label
-            .foregroundStyle(variant == "destructive" ? Color(red: 1, green: 0.62, blue: 0.62) : variant == "link" ? Color(red: 0.6, green: 0.75, blue: 1) : .white.opacity(0.92))
+            .foregroundStyle(variant == "destructive" ? Color(red: 1, green: 0.62, blue: 0.62) : variant == "link" ? palette.accent : primary ? palette.onAccent : .white.opacity(0.92))
         Group {
             switch variant {
             case "ghost", "link", "textStrong", "text":
@@ -669,7 +676,8 @@ private struct PluginButtonFace: View {
             case "secondary":
                 label.vibeGlass(Capsule(), tint: .white.opacity(hovered ? 0.09 : 0.04))
             default:
-                label.vibeGlass(Capsule(), tint: Color(red: 0.42, green: 0.55, blue: 1).opacity(hovered ? 0.55 : 0.45))
+                // The page's main action, in the sky's accent (its label colour follows: dark on the light accent).
+                label.background(palette.accent.opacity(hovered ? 1 : 0.9), in: .capsule)
             }
         }
         .opacity(enabled ? (configuration.isPressed ? 0.7 : 1) : 0.4)
@@ -770,6 +778,7 @@ struct PluginTextField: View {
     @State private var text = ""
     @State private var synced: String?
     @FocusState private var focused: Bool
+    @Environment(\.skyPalette) private var palette
 
     var body: some View {
         let value = node.string("value") ?? ""
@@ -789,7 +798,7 @@ struct PluginTextField: View {
         .padding(.horizontal, 10)
         .padding(.vertical, multiline ? 8 : 5)
         .frame(minHeight: 28)
-        .vibeGlass(RoundedRectangle(cornerRadius: multiline ? 10 : 9, style: .continuous), tint: .black.opacity(focused ? 0.12 : 0.06))
+        .vibeGlass(RoundedRectangle(cornerRadius: multiline ? 10 : 9, style: .continuous), tint: focused ? palette.field.opacity(1.4) : palette.field)
         .disabled(node.bool("disabled"))
         .onAppear { text = value; synced = value }
         .onChange(of: value) { _, v in
@@ -1042,5 +1051,14 @@ struct PluginToastView: View {
         .vibeGlass(RoundedRectangle(cornerRadius: 12, style: .continuous), tint: .black.opacity(0.15), frost: 0.8)
         .onTapGesture { PluginHost.shared.dismissToast(toast.id) }
         .transition(.move(edge: .trailing).combined(with: .opacity))
+    }
+}
+
+/// A selected row's fill inside a plugin, in the sky's selection colour.
+struct SkySelectionFill: View {
+    var radius: CGFloat
+    @Environment(\.skyPalette) private var palette
+    var body: some View {
+        RoundedRectangle(cornerRadius: radius, style: .continuous).fill(palette.selection)
     }
 }

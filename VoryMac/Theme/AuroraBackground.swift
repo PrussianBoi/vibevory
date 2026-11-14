@@ -31,6 +31,52 @@ enum SkyScene: String, CaseIterable, Identifiable {
     }
 }
 
+/// The colours that go with each sky (Dev's pick from the colour mockup, 2026-11-14): an accent taken from the
+/// scene, and a glass, selection and field tint that sit in it instead of greying it out.
+struct SkyPalette: Equatable {
+    var accent: Color
+    var onAccent: Color
+    var glass: Color
+    var selection: Color
+    var field: Color
+
+    static let plain = SkyPalette(accent: AppTheme.artha, onAccent: Color(red: 0.09, green: 0.07, blue: 0.23),
+                                  glass: .white.opacity(0.03), selection: .white.opacity(0.08), field: .black.opacity(0.06))
+
+    private static func rgb(_ r: Double, _ g: Double, _ b: Double, _ a: Double = 1) -> Color {
+        Color(red: r / 255, green: g / 255, blue: b / 255).opacity(a)
+    }
+    private static func make(_ accent: (Double, Double, Double), on: (Double, Double, Double),
+                             glass: (Double, Double, Double, Double), field: (Double, Double, Double, Double)) -> SkyPalette {
+        SkyPalette(accent: rgb(accent.0, accent.1, accent.2), onAccent: rgb(on.0, on.1, on.2),
+                   glass: rgb(glass.0, glass.1, glass.2, glass.3), selection: rgb(accent.0, accent.1, accent.2, 0.16),
+                   field: rgb(field.0, field.1, field.2, field.3))
+    }
+
+    static func of(_ scene: SkyScene) -> SkyPalette {
+        switch scene {
+        case .aurora: make((127, 240, 198), on: (6, 34, 26), glass: (12, 40, 48, 0.24), field: (8, 28, 34, 0.30))
+        case .sunset: make((255, 180, 140), on: (42, 18, 8), glass: (60, 28, 30, 0.22), field: (40, 18, 20, 0.30))
+        case .mist: make((169, 198, 236), on: (11, 22, 38), glass: (30, 44, 66, 0.22), field: (20, 30, 46, 0.30))
+        case .milkyWay: make((235, 203, 157), on: (42, 29, 12), glass: (22, 22, 40, 0.26), field: (14, 14, 28, 0.32))
+        case .nebula: make((240, 155, 234), on: (42, 10, 40), glass: (30, 14, 48, 0.30), field: (18, 8, 30, 0.36))
+        }
+    }
+}
+
+extension EnvironmentValues {
+    @Entry var skyPalette: SkyPalette = .plain
+}
+
+/// Puts the chosen sky's colours on everything below: the tint (accent) and the palette the glass reads.
+struct SkyThemed: ViewModifier {
+    @AppStorage("vibe.skyScene") private var sceneName = SkyScene.aurora.rawValue
+    func body(content: Content) -> some View {
+        let palette = SkyPalette.of(SkyScene(rawValue: sceneName) ?? .aurora)
+        content.tint(palette.accent).environment(\.skyPalette, palette)
+    }
+}
+
 /// One drawn layer of a sky: its shader, how much smaller than the window it is drawn, its frame rate, and
 /// whether it adds its light onto the layers below (stars on black) instead of covering them.
 struct SkyLayer {

@@ -93,7 +93,7 @@ struct VoryMacApp: App {
                 .botWindowLiveness(needsKey: true)
                 .environment(model)
                 .preferredColorScheme(.dark) // Artha is dark only: its glass and sky have no light version.
-                .tint(AppTheme.artha)
+                .modifier(SkyThemed())
                 .onOpenURL { url in model.open(url) }
                 .continuesHandoff(model)
                 .task {

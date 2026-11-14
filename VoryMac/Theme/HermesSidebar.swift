@@ -483,6 +483,7 @@ struct SideNavRow: View {
     var badge: Int = 0
     var action: () -> Void
     @State private var hovering = false
+    @Environment(\.skyPalette) private var palette
 
     var body: some View {
         Button(action: action) {
@@ -499,7 +500,7 @@ struct SideNavRow: View {
             }
             .padding(.horizontal, 9)
             .frame(height: 26)
-            .background(Color.white.opacity(selected ? 0.07 : (hovering ? 0.045 : 0)), in: .rect(cornerRadius: 7))
+            .background(selected ? palette.selection : Color.white.opacity(hovering ? 0.045 : 0), in: .rect(cornerRadius: 7))
             .contentShape(.rect)
         }
         .buttonStyle(.plain)
@@ -588,6 +589,7 @@ struct SessionRowView: View {
     var state: State
     var action: () -> Void
     @SwiftUI.State private var hovering = false
+    @SwiftUI.Environment(\.skyPalette) private var palette
 
     var body: some View {
         Button(action: action) {
@@ -603,7 +605,7 @@ struct SessionRowView: View {
             }
             .padding(.horizontal, 9)
             .frame(height: 26)
-            .background(Color.white.opacity(selected ? 0.08 : (hovering ? 0.045 : 0)), in: .rect(cornerRadius: 7))
+            .background(selected ? palette.selection : Color.white.opacity(hovering ? 0.045 : 0), in: .rect(cornerRadius: 7))
             .contentShape(.rect)
         }
         .buttonStyle(.plain)
