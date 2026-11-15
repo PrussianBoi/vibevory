@@ -39,7 +39,7 @@ import { jsx, jsxs } from 'react/jsx-runtime'
 
 const ID = 'task-manager'
 const ROUTE = '/tasks'
-const LADDERS_ROUTE = '/tasks/ladders'
+const DEFAULT_TAB = 'today'
 const GREEN = '#5ad98c'
 const AMBER = '#ffc066'
 let pluginContext = null
@@ -424,8 +424,8 @@ function LadderCard({ ladder }) {
       jsxs('div', {
         className: 'flex flex-col gap-1',
         children: [
-          jsx('span', { className: 'text-base font-semibold', children: ladder.name }),
-          jsx('span', { className: `text-sm ${secondary} line-clamp-2`, children: ladder.stand || 'Where you stand is not set yet.' })
+          jsx('div', { className: 'text-base font-semibold', children: ladder.name }),
+          jsx('div', { className: `text-sm ${secondary} line-clamp-2`, children: ladder.stand || 'Where you stand is not set yet.' })
         ]
       }),
       jsx('div', {
@@ -456,7 +456,8 @@ function LaddersView() {
   return jsx('div', { className: 'flex flex-col gap-4', children: data.ladders.map(l => jsx(LadderCard, { ladder: l }, l.name)) })
 }
 
-function TasksPage({ tab }) {
+function TasksPage() {
+  const [tab, setTab] = useState(DEFAULT_TAB)
   const { data, error } = useToday()
   const actions = useActions()
   const summary = data ? `${data.daily_done} of ${data.daily.length} daily done · ${data.open_exec} in execution` : ''
@@ -469,13 +470,13 @@ function TasksPage({ tab }) {
           jsxs('div', {
             className: 'flex flex-col gap-1 flex-1',
             children: [
-              jsx('span', { className: 'text-2xl font-semibold', children: longDate(data ? data.date : localISO()) }),
-              jsx('span', { className: `text-sm ${secondary}`, children: summary })
+              jsx('div', { className: 'text-2xl font-semibold', children: longDate(data ? data.date : localISO()) }),
+              jsx('div', { className: `text-sm ${secondary}`, children: summary })
             ]
           }),
           jsx(SegmentedControl, {
             value: tab,
-            onChange: v => host.navigate(valueOf(v) === 'ladders' ? LADDERS_ROUTE : ROUTE),
+            onChange: v => setTab(valueOf(v) === 'ladders' ? 'ladders' : 'today'),
             options: [
               { id: 'today', label: 'Today' },
               { id: 'ladders', label: 'Ladders' }
@@ -518,8 +519,7 @@ export default {
   register(ctx) {
     pluginContext = ctx
     ctx.registerMany([
-      { id: 'page', area: ROUTES_AREA, data: { path: ROUTE }, render: () => jsx(TasksPage, { tab: 'today' }) },
-      { id: 'ladders', area: ROUTES_AREA, data: { path: LADDERS_ROUTE }, render: () => jsx(TasksPage, { tab: 'ladders' }) },
+      { id: 'page', area: ROUTES_AREA, data: { path: ROUTE }, render: () => jsx(TasksPage, {}) },
       { id: 'nav', area: SIDEBAR_NAV_AREA, order: 45, data: { path: ROUTE, label: 'Tasks', codicon: 'checklist' } },
       { id: 'status', area: STATUSBAR_AREAS.right, order: 75, render: () => jsx(TaskStatus, {}) },
       {
