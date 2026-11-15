@@ -392,7 +392,7 @@ function TodayView({ data, actions }) {
 function LevelColumn({ level, index, total, current, color }) {
   const reached = level.level <= current
   const next = level.level === current + 1
-  const dot = reached ? `bg-[${color}]` : next ? `bg-[${color}66]` : 'bg-[#ffffff33]'
+  const dot = reached ? `bg-[${color}]` : next ? `border-[${color}]` : 'bg-[#ffffff33]'
   const line = 'bg-[#ffffff22]'
   return jsxs('div', {
       className: 'flex flex-col items-center gap-1.5',
@@ -409,7 +409,7 @@ function LevelColumn({ level, index, total, current, color }) {
           className: `text-xs font-semibold text-center ${next ? `text-[${color}]` : ''}`,
           children: `L${level.level}  ${level.name}`
         }),
-        jsx('span', { className: `text-[11px] text-center ${muted}`, children: level.gist })
+        jsx('span', { className: `text-[11px] text-center px-1 ${muted}`, children: level.gist })
       ]
     })
 }
@@ -429,7 +429,7 @@ function LadderCard({ ladder }) {
         ]
       }),
       jsx('div', {
-        className: `grid grid-cols-${ladder.levels.length} gap-1 py-2`,
+        className: `grid grid-cols-${ladder.levels.length} py-2`,
         children: ladder.levels.map((lv, i) =>
           jsx(LevelColumn, { level: lv, index: i, total: ladder.levels.length, current: ladder.current_level, color: ladder.color }, lv.level)
         )

@@ -63,7 +63,7 @@ struct TW {
     var size: CGFloat?, weight: Font.Weight?, mono = false, italic = false, uppercase = false, tracking: CGFloat?
     var color: Color?, bg: Color?, selectedBG = false, hoverBG = false
     var border = false, borderB = false, borderT = false, borderR = false, borderL = false
-    var radius: CGFloat?, roundedFull = false, hexBG = false
+    var radius: CGFloat?, roundedFull = false, hexBG = false, outline: Color?
     var textAlign: String?
     var opacity: Double?
 
@@ -152,6 +152,7 @@ struct TW {
         if let v = after("text-[") { size = Self.length(String(v.dropLast())); return }
         if let v = after("text-") { color = Self.color(v); return }
         if let v = after("bg-[#"), let c = Self.hex(String(v.dropLast())) { bg = c; hexBG = true; return }
+        if let v = after("border-[#"), let c = Self.hex(String(v.dropLast())) { outline = c; return }
         if let v = after("bg-") {
             if v.contains("selected") || v.contains("active") { selectedBG = true } else { bg = Self.fill(v) }
             return
@@ -540,6 +541,10 @@ enum PluginDraw {
             v = AnyView(v.background(bg.opacity(0.9), in: RoundedRectangle(cornerRadius: radius, style: .continuous)))
         } else if tw.border && radius == 0 {
             v = AnyView(v.overlay(Rectangle().strokeBorder(.white.opacity(0.1), lineWidth: 0.5)))
+        }
+        // A plugin's own outline colour (`border-[#78c8ff]`): a ring, as on a timeline's next step.
+        if let o = tw.outline {
+            v = AnyView(v.overlay(RoundedRectangle(cornerRadius: radius, style: .continuous).strokeBorder(o, lineWidth: 1.5)))
         }
         if tw.borderB { v = AnyView(v.overlay(alignment: .bottom) { hairline(h: true) }) }
         if tw.borderT { v = AnyView(v.overlay(alignment: .top) { hairline(h: true) }) }
