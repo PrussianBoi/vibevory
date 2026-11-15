@@ -63,7 +63,7 @@ struct TW {
     var size: CGFloat?, weight: Font.Weight?, mono = false, italic = false, uppercase = false, tracking: CGFloat?
     var color: Color?, bg: Color?, selectedBG = false, hoverBG = false
     var border = false, borderB = false, borderT = false, borderR = false, borderL = false
-    var radius: CGFloat?, roundedFull = false
+    var radius: CGFloat?, roundedFull = false, hexBG = false
     var textAlign: String?
     var opacity: Double?
 
@@ -148,8 +148,10 @@ struct TW {
             }
             return
         }
+        if let v = after("text-[#"), let c = Self.hex(String(v.dropLast())) { color = c; return }
         if let v = after("text-[") { size = Self.length(String(v.dropLast())); return }
         if let v = after("text-") { color = Self.color(v); return }
+        if let v = after("bg-[#"), let c = Self.hex(String(v.dropLast())) { bg = c; hexBG = true; return }
         if let v = after("bg-") {
             if v.contains("selected") || v.contains("active") { selectedBG = true } else { bg = Self.fill(v) }
             return
@@ -186,6 +188,15 @@ struct TW {
         case "r": e.trailing = v
         default: break
         }
+    }
+
+    /// A plugin's own colour, `#rrggbb` or `#rrggbbaa` (as in `text-[#78c8ff]`, `bg-[#78c8ff33]`).
+    static func hex(_ v: String) -> Color? {
+        let h = v.hasPrefix("#") ? String(v.dropFirst()) : v
+        guard h.count == 6 || h.count == 8, let n = UInt64(h, radix: 16) else { return nil }
+        let rgba = h.count == 6 ? (n << 8) | 0xff : n
+        return Color(red: Double((rgba >> 24) & 0xff) / 255, green: Double((rgba >> 16) & 0xff) / 255,
+                     blue: Double((rgba >> 8) & 0xff) / 255, opacity: Double(rgba & 0xff) / 255)
     }
 
     /// The Desktop's text colours (its CSS variables and Tailwind names) on the app's dark glass.
@@ -549,7 +560,7 @@ enum PluginDraw {
                   let pct = Double(w.dropLast()) else { return nil }
             // Done is white, as in the design; only warning and failure keep a colour.
             let cls = k.className.lowercased()
-            let coloured = ["danger", "destructive", "red", "warn", "amber", "yellow"].contains { cls.contains($0) }
+            let coloured = TW(k.className).hexBG || ["danger", "destructive", "red", "warn", "amber", "yellow"].contains { cls.contains($0) }
             let fill = coloured ? (TW(k.className).bg ?? .white.opacity(0.85)) : .white.opacity(0.85)
             return (pct / 100, fill)
         }
@@ -721,7 +732,7 @@ struct PluginBadge: View {
 
     var body: some View {
         let text = node.plainText
-        let tint = Self.tint(text: text.lowercased(), variant: node.string("variant") ?? "default")
+        let tint = node.string("color").flatMap(TW.hex) ?? Self.tint(text: text.lowercased(), variant: node.string("variant") ?? "default")
         Text(text)
             .font(.system(size: 10.5, weight: .medium))
             .foregroundStyle(tint == nil ? .white.opacity(0.75) : tint!.mix(with: .white, by: 0.35))

@@ -1227,6 +1227,22 @@ def workflows_rest(method, base, payload):
         return {"outcome": "requested"}
     return None
 
+# ── Tasks (Dev's task-manager plugin, /api/plugins/task-manager/…): sample data for the shots ──
+
+_TASKS_FIXTURES = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "ci", "tasks-plugin", "fixtures.json")
+
+def tasks_rest(method, base, payload):
+    sub = base[len("/api/plugins/task-manager"):]
+    data = json.load(open(_TASKS_FIXTURES)) if os.path.exists(_TASKS_FIXTURES) else {}
+    if method == "GET" and sub == "/today":
+        return data.get("today")
+    if method == "GET" and sub == "/ladders":
+        return data.get("ladders")
+    if method == "GET" and sub == "/health":
+        return {"ok": True}
+    return None
+
+
 # ── Kanban (the gateway's bundled plugin, /api/plugins/kanban/…) ─────────────────────────────
 # A board in the real shape (plugins/kanban/dashboard/plugin_api.py): a few tasks per status on
 # two boards, one running worker, a task with comments and two runs, a worker log. Writes answer
@@ -2167,6 +2183,8 @@ def _process_request(connection, request):
         return files_download(query)
     elif base.startswith("/api/dashboard/agent-plugins") and (plug := plugins_rest(method, base, body_json if isinstance(body_json, dict) else {})) is not None:
         result = plug
+    elif base.startswith("/api/plugins/task-manager/") and tasks_rest(method, base, body_json) is not None:
+        result = (200, tasks_rest(method, base, body_json))
     elif base.startswith("/api/plugins/workflows/") and workflows_rest(method, base, body_json) is not None:
         result = (200, workflows_rest(method, base, body_json if isinstance(body_json, dict) else {}))
     elif base.startswith("/api/plugins/kanban/") or base.startswith("/api/audio/"):

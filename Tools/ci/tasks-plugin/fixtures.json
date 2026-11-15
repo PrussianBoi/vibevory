@@ -1,0 +1,267 @@
+{
+ "today": {
+  "date": "2026-11-15",
+  "daily": [
+   {
+    "id": "d_f20826ef",
+    "title": "Sales DMs",
+    "ladder": "Online store",
+    "target": 20,
+    "count": 12,
+    "done": false,
+    "streak": 9,
+    "total": 192,
+    "position": 0
+   },
+   {
+    "id": "d_04a921b9",
+    "title": "Sales calls",
+    "ladder": "Online store",
+    "target": 5,
+    "count": 5,
+    "done": true,
+    "streak": 4,
+    "total": 20,
+    "position": 1
+   },
+   {
+    "id": "d_a46eaef7",
+    "title": "Post",
+    "ladder": "Workshop",
+    "target": 1,
+    "count": 1,
+    "done": true,
+    "streak": 12,
+    "total": 12,
+    "position": 2
+   },
+   {
+    "id": "d_a3b5d252",
+    "title": "New listings",
+    "ladder": "Online store",
+    "target": 10,
+    "count": 6,
+    "done": false,
+    "streak": 3,
+    "total": 36,
+    "position": 3
+   }
+  ],
+  "execution": [
+   {
+    "id": "x_c1084717",
+    "title": "Website that takes orders from business buyers",
+    "ladder": "Online store",
+    "step": "L1 Direct Accounts: first business buyer",
+    "notes": "",
+    "status": "open",
+    "position": 0,
+    "age_days": 0,
+    "idle_days": 0,
+    "stuck": false,
+    "created_at": "2026-11-15T22:58:34+00:00",
+    "done_at": null
+   },
+   {
+    "id": "x_c05710aa",
+    "title": "Rank buyer pains from three forums, with quotes",
+    "ladder": "Workshop",
+    "step": "L1 Defined Offer: target customer and pains",
+    "notes": "",
+    "status": "open",
+    "position": 1,
+    "age_days": 0,
+    "idle_days": 0,
+    "stuck": false,
+    "created_at": "2026-11-15T22:58:34+00:00",
+    "done_at": null
+   },
+   {
+    "id": "x_168aebbb",
+    "title": "Price and title check on the live listings",
+    "ladder": "Online store",
+    "step": "First order",
+    "notes": "",
+    "status": "open",
+    "position": 2,
+    "age_days": 0,
+    "idle_days": 0,
+    "stuck": false,
+    "created_at": "2026-11-15T22:58:34+00:00",
+    "done_at": null
+   },
+   {
+    "id": "x_0130ad46",
+    "title": "One-page offer for warm contacts",
+    "ladder": "Advisory",
+    "step": "L0 First Paying Client",
+    "notes": "",
+    "status": "open",
+    "position": 3,
+    "age_days": 9,
+    "idle_days": 9,
+    "stuck": true,
+    "created_at": "2026-11-06T12:00:00+00:00",
+    "done_at": null
+   }
+  ],
+  "daily_done": 2,
+  "open_exec": 4,
+  "ladders": {
+   "Online store": {
+    "short": "Store",
+    "color": "#78c8ff"
+   },
+   "Workshop": {
+    "short": "Workshop",
+    "color": "#ffaa6e"
+   },
+   "Advisory": {
+    "short": "Advisory",
+    "color": "#be96ff"
+   }
+  }
+ },
+ "ladders": {
+  "ladders": [
+   {
+    "name": "Online store",
+    "short": "Store",
+    "color": "#78c8ff",
+    "outcome": "a national online store.",
+    "stand": "Below Level 0. 30 listings live, no orders yet",
+    "working": "",
+    "next": "\"First order\"",
+    "next_short": "First order",
+    "current_level": -1,
+    "levels": [
+     {
+      "level": 0,
+      "name": "Marketplace Seller",
+      "points": "about 100 orders a month",
+      "gist": "about 100 orders a month"
+     },
+     {
+      "level": 1,
+      "name": "Direct Accounts",
+      "points": "1 to 2 business buyers order from the website",
+      "gist": "1 to 2 business buyers order from the website"
+     },
+     {
+      "level": 2,
+      "name": "Wholesale",
+      "points": "1 manufacturer grants rights",
+      "gist": "1 manufacturer grants rights"
+     },
+     {
+      "level": 3,
+      "name": "Regional Brand",
+      "points": "own warehouse; roughly $5M a year",
+      "gist": "own warehouse"
+     },
+     {
+      "level": 4,
+      "name": "National Brand",
+      "points": "$20M a year",
+      "gist": "$20M a year"
+     }
+    ],
+    "open_exec": 2,
+    "daily": 3,
+    "order": 0
+   },
+   {
+    "name": "Workshop",
+    "short": "Workshop",
+    "color": "#ffaa6e",
+    "outcome": "a busy workshop.",
+    "stand": "Level 0 (idea and early research)",
+    "working": "",
+    "next": "of Level 1, \"identified target customer and pain points\"",
+    "next_short": "L1: identified target customer and pain points",
+    "current_level": 0,
+    "levels": [
+     {
+      "level": 0,
+      "name": "Starting Point",
+      "points": "idea, early research",
+      "gist": "idea, early research"
+     },
+     {
+      "level": 1,
+      "name": "Defined Offer",
+      "points": "niche, customer, pains, offer",
+      "gist": "niche, customer, pains, offer"
+     },
+     {
+      "level": 2,
+      "name": "Ready",
+      "points": "client and supplier channels work",
+      "gist": "client and supplier channels work"
+     },
+     {
+      "level": 3,
+      "name": "First Order",
+      "points": "first paid order delivered",
+      "gist": "first paid order delivered"
+     },
+     {
+      "level": 4,
+      "name": "Established Shop",
+      "points": "first large client; recurring customers",
+      "gist": "first large client"
+     },
+     {
+      "level": 5,
+      "name": "Several Shops",
+      "points": "multiple profitable shops",
+      "gist": "multiple profitable shops"
+     }
+    ],
+    "open_exec": 1,
+    "daily": 1,
+    "order": 1
+   },
+   {
+    "name": "Advisory",
+    "short": "Advisory",
+    "color": "#be96ff",
+    "outcome": "a small advisory firm.",
+    "stand": "Before Level 0 ($0 made)",
+    "working": "",
+    "next": "Level 0, one company pays for a defined piece of work",
+    "next_short": "L0: one company pays for a defined piece of work",
+    "current_level": -1,
+    "levels": [
+     {
+      "level": 0,
+      "name": "First Paying Client",
+      "points": "one company pays",
+      "gist": "one company pays"
+     },
+     {
+      "level": 1,
+      "name": "Repeat Client",
+      "points": "a second project from the first client",
+      "gist": "a second project from the first client"
+     },
+     {
+      "level": 2,
+      "name": "Practice",
+      "points": "3 to 5 clients, one on retainer",
+      "gist": "3 to 5 clients, one on retainer"
+     },
+     {
+      "level": 3,
+      "name": "Firm",
+      "points": "others deliver; roughly $1M a year",
+      "gist": "others deliver"
+     }
+    ],
+    "open_exec": 1,
+    "daily": 0,
+    "order": 2
+   }
+  ]
+ }
+}
