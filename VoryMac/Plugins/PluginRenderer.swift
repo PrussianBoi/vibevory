@@ -459,6 +459,9 @@ enum PluginDraw {
             content = t
         } else if let bar = progressBar(n, tw) {
             return bar
+        } else if kids.isEmpty && (tw.width != nil || tw.height != nil || tw.grow || tw.fillW) {
+            // An empty sized box (a dot, a rule, a spacer): it takes the size it is given, so its fill shows.
+            content = AnyView(Color.clear)
         } else if tw.grid && tw.cols > 1 {
             content = AnyView(LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: tw.gap ?? 0, alignment: .topLeading), count: tw.cols),
                                         alignment: .leading, spacing: tw.gap ?? 0) {
