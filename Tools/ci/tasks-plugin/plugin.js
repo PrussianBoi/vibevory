@@ -271,13 +271,7 @@ function ExecRow({ item, index, count, styles, actions, onEdit }) {
         onClick: () => onEdit(item),
         children: item.title
       }),
-      jsxs('div', {
-        className: 'w-[420px] flex items-center gap-2',
-        children: [
-          jsx('div', { className: 'flex-1' }),
-          item.step ? jsx('span', { className: `text-xs ${secondary} truncate`, children: item.step }) : null
-        ]
-      }),
+      jsx('span', { className: `w-[420px] text-xs text-right truncate ${secondary}`, children: item.step || '' }),
       jsx('span', {
         className: `w-[96px] text-xs text-right ${item.stuck ? `text-[${AMBER}]` : muted}`,
         children: age
