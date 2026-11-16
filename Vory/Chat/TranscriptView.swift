@@ -517,13 +517,27 @@ struct TranscriptView: View {
             // frame against a moving margin overshot into blank space.
             .onChange(of: bottomInset) { _, _ in
                 guard metrics.stickToBottom, !metrics.userScrolling else { return }
+                #if os(macOS)
+                // VibeVory: on the Mac the margin follows the composer's height in a step (a line added
+                // with Shift-Return, the field emptied on send), not an animation. Following it 80 ms
+                // later with a 0.2 s glide showed the thread jump away and swing back each time; the end
+                // stays pinned in the same update instead, with no animation.
+                if !holdingCard {
+                    var t = Transaction(); t.disablesAnimations = true
+                    withTransaction(t) { scrollPosition.scrollTo(edge: .bottom) }
+                }
+                #endif
                 insetSettle?.cancel()
                 insetSettle = Task {
                     try? await Task.sleep(for: .milliseconds(80))
                     guard !Task.isCancelled, metrics.stickToBottom, !metrics.userScrolling else { return }
                     if holdingCard { followAfterHold = true; return }
+                    #if os(macOS)
+                    if metrics.distanceFromBottom > 1 { scrollPosition.scrollTo(edge: .bottom) }
+                    #else
                     if settling { scrollPosition.scrollTo(edge: .bottom) }
                     else { withAnimation(.easeOut(duration: 0.2)) { scrollPosition.scrollTo(edge: .bottom) } }
+                    #endif
                 }
             }
         }
