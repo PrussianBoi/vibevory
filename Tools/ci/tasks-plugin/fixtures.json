@@ -80,7 +80,7 @@
     "id": "x_168aebbb",
     "title": "Price and title check on the live listings",
     "ladder": "Online store",
-    "step": "First order",
+    "step": "L0 Marketplace Seller: first order",
     "notes": "",
     "status": "open",
     "position": 2,
@@ -132,7 +132,7 @@
     "stand": "Below Level 0. 30 listings live, no orders yet",
     "working": "",
     "next": "\"First order\"",
-    "next_short": "First order",
+    "next_short": "L0: first order from a business buyer",
     "current_level": -1,
     "levels": [
      {
