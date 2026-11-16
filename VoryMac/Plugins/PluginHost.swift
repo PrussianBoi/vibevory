@@ -1,4 +1,5 @@
 import AppKit
+import CryptoKit
 import JavaScriptCore
 import SwiftUI
 import VoryCore
@@ -57,6 +58,7 @@ final class PluginHost {
         self.runtime = runtime
         stop()
         guard let runtime else { return }
+        syncFromServer(runtime)
         let plugins = Self.diskPlugins()
         guard !plugins.isEmpty else { return }
         guard let url = Bundle.main.url(forResource: "plugin-runtime", withExtension: "js"),
@@ -85,6 +87,45 @@ final class PluginHost {
         problem = failed.isEmpty ? nil : "Didn't load: " + failed.joined(separator: ", ")
         refreshPages()
         mountSelected()
+    }
+
+    /// VibeVory: the plugin pages live on the Hermes server, next to their plugins, and this Mac
+    /// keeps a copy. On connect the server's list (`desktop-pages` dashboard plugin) is compared
+    /// with the copies by hash; a page that is new or changed is fetched, saved and the plugins
+    /// load again. A page the server doesn't have (one installed here) is left alone.
+    @ObservationIgnored private var syncTask: Task<Void, Never>?
+    private func syncFromServer(_ runtime: GatewayRuntime) {
+        syncTask?.cancel()
+        syncTask = Task { [weak self] in
+            let api = runtime.api
+            func get(_ path: String) async -> Data? {
+                let req = RelayedRequest(method: "GET", path: path, query: [], body: nil, contentType: nil, authenticated: true)
+                guard let r = try? await api.forward(req), r.status == 200 else { return nil }
+                return r.body
+            }
+            guard let data = await get("/api/plugins/desktop-pages/list"),
+                  let obj = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+                  let pages = obj["pages"] as? [[String: Any]] else { return }
+            let dir = Self.pluginsDir
+            var changed = false
+            for page in pages {
+                guard let id = page["id"] as? String, let sha = page["sha256"] as? String,
+                      id.range(of: "^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$", options: .regularExpression) != nil else { continue }
+                let file = dir.appendingPathComponent(id).appendingPathComponent("plugin.js")
+                if let local = try? Data(contentsOf: file),
+                   SHA256.hash(data: local).map({ String(format: "%02x", $0) }).joined() == sha { continue }
+                guard !Task.isCancelled, let code = await get("/api/plugins/desktop-pages/page/\(id)") else { continue }
+                do {
+                    try FileManager.default.createDirectory(at: file.deletingLastPathComponent(), withIntermediateDirectories: true)
+                    try code.write(to: file, options: .atomic)
+                    changed = true
+                } catch {
+                    NSLog("[plugins] couldn't save %@: %@", id, error.localizedDescription)
+                }
+            }
+            guard changed, !Task.isCancelled, let self, self.runtime === runtime else { return }
+            self.reload()
+        }
     }
 
     /// Loads the disk plugins again (one was added or removed), for the same gateway.
