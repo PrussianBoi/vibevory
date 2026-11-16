@@ -417,7 +417,13 @@ enum PluginDraw {
         default:
             view = element(n, tw: tw, ts: ts, ctx: ctx)
         }
-        return sized(view, n, tw, ctx: ctx)
+        let out = sized(view, n, tw, ctx: ctx)
+        // VibeVory: `dragId` makes an element a row the person can drag onto another row of its
+        // `dragGroup`; the row it lands on gets `onDropId(draggedId)` (a list reordered by hand).
+        if let id = n.string("dragId") {
+            return AnyView(PluginDragRow(id: id, group: n.string("dragGroup") ?? "", onDrop: n.handler("onDropId"), content: out))
+        }
+        return out
     }
 
     /// Size against the parent: fixed widths, fill, stretch, margins.
@@ -720,7 +726,13 @@ struct PluginRowButton: View {
         inner.selectedBG = false
         inner.bg = nil
         inner.border = card ? tw.border : false
-        return Button {
+        // VibeVory: `tapOnly` (a title inside a draggable row): a tap, not a button, so a drag can start on it.
+        if node.bool("tapOnly") {
+            return AnyView(PluginDraw.element(node, tw: inner, ts: ctx.text, ctx: ctx)
+                .contentShape(.rect)
+                .onTapGesture { if let h = node.handler("onClick") { host.dispatch(h) } })
+        }
+        return AnyView(Button {
             if let h = node.handler("onClick") { host.dispatch(h) }
             else if let href = node.string("href"), let url = URL(string: href) { NSWorkspace.shared.open(url) }
         } label: {
@@ -731,7 +743,36 @@ struct PluginRowButton: View {
         .background(.white.opacity(selected ? 0.11 : hovered ? 0.06 : 0), in: RoundedRectangle(cornerRadius: radius, style: .continuous))
         .onHover { hovered = $0 }
         .disabled(node.bool("disabled"))
-        .animation(.smooth(duration: 0.12), value: hovered)
+        .animation(.smooth(duration: 0.12), value: hovered))
+    }
+}
+
+/// VibeVory: a row that is dragged onto another row of the same group to move it there.
+struct PluginDragRow: View {
+    let id: String
+    let group: String
+    let onDrop: String?
+    let content: AnyView
+    @State private var targeted = false
+    private static let sep: Character = "\u{1F}"
+
+    var body: some View {
+        content
+            .contentShape(.rect)
+            .overlay(alignment: .top) {
+                if targeted { Capsule().fill(Color.accentColor).frame(height: 2).offset(y: -1) }
+            }
+            .draggable("\(group)\(Self.sep)\(id)") {
+                content.frame(width: 520).padding(.horizontal, 10).padding(.vertical, 4)
+                    .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 8, style: .continuous))
+            }
+            .dropDestination(for: String.self) { items, _ in
+                guard let onDrop, let item = items.first else { return false }
+                let parts = item.split(separator: Self.sep, maxSplits: 1, omittingEmptySubsequences: false)
+                guard parts.count == 2, String(parts[0]) == group, String(parts[1]) != id else { return false }
+                host.dispatch(onDrop, [String(parts[1])])
+                return true
+            } isTargeted: { targeted = $0 }
     }
 }
 

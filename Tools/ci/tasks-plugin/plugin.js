@@ -167,13 +167,17 @@ function LadderSelect({ value, onChange, ladders }) {
 
 // ── daily queue ────────────────────────────────────────────────────────────────────────
 
-function DailyRow({ item, styles, actions, onEdit }) {
+function DailyRow({ item, index, actions, onEdit }) {
   const pct = Math.min(100, Math.round((item.count / item.target) * 100))
   const glyph = item.done ? '✓' : item.count > 0 ? '◐' : '○'
   const add = n => actions.run({ path: `/daily/${item.id}/log`, method: 'POST', body: { add: n } })
   const streak = item.streak ? `${item.streak}-day streak · ${item.total} total` : `${item.total} total`
   return jsxs('div', {
     className: 'flex items-center gap-3 py-1.5',
+    // drag a row onto another row of the same domain to move it there
+    dragId: item.id,
+    dragGroup: `daily:${item.ladder}`,
+    onDropId: from => actions.run({ path: `/daily/${from}`, body: { position: index } }),
     children: [
       jsx(Tip, {
         label: item.done ? 'Done for today' : 'Add one',
@@ -248,12 +252,19 @@ function DailyEditor({ item, preset, ladders, actions, onClose }) {
 
 // ── execution queue ────────────────────────────────────────────────────────────────────
 
-function ExecRow({ item, index, count, styles, actions, onEdit }) {
+function ExecRow({ item, index, count, actions, onEdit }) {
   const done = item.status === 'done'
   const age = done ? 'done today' : item.age_days === 0 ? 'new' : `day ${item.age_days}${item.stuck ? ' · stuck' : ''}`
   const move = delta => actions.run({ path: `/exec/${item.id}`, body: { position: index + delta } })
   return jsxs('div', {
     className: `flex items-center gap-3 py-1.5${done ? ' opacity-50' : ''}`,
+    ...(done
+      ? {}
+      : {
+          dragId: item.id,
+          dragGroup: `exec:${item.ladder}`,
+          onDropId: from => actions.run({ path: `/exec/${from}`, body: { position: index } })
+        }),
     children: [
       jsx('span', { className: `w-[14px] text-xs ${muted}`, children: done ? '' : String(index + 1) }),
       jsx(Tip, {
@@ -268,6 +279,7 @@ function ExecRow({ item, index, count, styles, actions, onEdit }) {
       jsx('button', {
         className: 'flex-1 text-sm text-left truncate',
         type: 'button',
+        tapOnly: true,
         onClick: () => onEdit(item),
         children: item.title
       }),
@@ -373,7 +385,7 @@ function DomainCard({ name, style, daily, execution, actions, onDaily, onExec })
         children: [
           jsx(QueueLabel, { title: 'Daily', hint: 'resets every morning', onAdd: () => onDaily({ fresh: true, ladder: name }) }),
           daily.length
-            ? daily.map(item => jsx(DailyRow, { item, actions, onEdit: onDaily }, item.id))
+            ? daily.map((item, index) => jsx(DailyRow, { item, index, actions, onEdit: onDaily }, item.id))
             : jsx('span', { className: `text-sm py-1.5 ${muted}`, children: 'No daily actions for this domain.' })
         ]
       }),
