@@ -180,7 +180,6 @@ function DailyRow({ item, styles, actions, onEdit }) {
         children: jsx('button', { className: 'w-[22px] text-base', onClick: () => add(1), type: 'button', children: glyph })
       }),
       jsx('span', { className: 'w-[200px] text-sm truncate', children: item.title }),
-      jsx('div', { className: 'w-[130px]', children: jsx(LadderPill, { ladder: item.ladder, styles }) }),
       jsx('div', {
         className: 'flex-1 h-[4px]',
         children: jsx('div', { className: item.done ? `bg-[${GREEN}]` : 'bg-white', style: { width: `${pct}%` } })
@@ -201,9 +200,9 @@ function DailyRow({ item, styles, actions, onEdit }) {
   })
 }
 
-function DailyEditor({ item, ladders, actions, onClose }) {
+function DailyEditor({ item, preset, ladders, actions, onClose }) {
   const [title, setTitle] = useState(item ? item.title : '')
-  const [ladder, setLadder] = useState(item ? item.ladder : '')
+  const [ladder, setLadder] = useState(item ? item.ladder : preset || '')
   const [target, setTarget] = useState(item ? String(item.target) : '1')
   const save = async e => {
     if (e && e.preventDefault) e.preventDefault()
@@ -275,8 +274,8 @@ function ExecRow({ item, index, count, styles, actions, onEdit }) {
       jsxs('div', {
         className: 'w-[420px] flex items-center gap-2',
         children: [
-          jsx(LadderPill, { ladder: item.ladder, styles }),
-          item.step ? jsx('span', { className: `text-xs ${secondary} truncate`, children: `› ${item.step}` }) : null
+          jsx('div', { className: 'flex-1' }),
+          item.step ? jsx('span', { className: `text-xs ${secondary} truncate`, children: item.step }) : null
         ]
       }),
       jsx('span', {
@@ -296,9 +295,9 @@ function ExecRow({ item, index, count, styles, actions, onEdit }) {
   })
 }
 
-function ExecEditor({ item, ladders, actions, onClose }) {
+function ExecEditor({ item, preset, ladders, actions, onClose }) {
   const [title, setTitle] = useState(item ? item.title : '')
-  const [ladder, setLadder] = useState(item ? item.ladder : '')
+  const [ladder, setLadder] = useState(item ? item.ladder : preset || '')
   const [step, setStep] = useState(item ? item.step : '')
   const [notes, setNotes] = useState(item ? item.notes : '')
   const save = async e => {
@@ -345,45 +344,103 @@ function ExecEditor({ item, ladders, actions, onClose }) {
 
 // ── pages ──────────────────────────────────────────────────────────────────────────────
 
+function QueueLabel({ title, hint, onAdd }) {
+  return jsxs('div', {
+    className: 'flex items-center gap-2',
+    children: [
+      jsx('span', { className: fieldLabel, children: title }),
+      jsx('span', { className: `text-xs ${muted}`, children: hint }),
+      jsx('div', { className: 'flex-1' }),
+      jsx(Button, { size: 'sm', variant: 'ghost', onClick: onAdd, children: '+ Add' })
+    ]
+  })
+}
+
+function DomainCard({ name, style, daily, execution, actions, onDaily, onExec }) {
+  const open = execution.filter(x => x.status === 'open')
+  const ids = open.map(x => x.id)
+  const done = daily.filter(x => x.done).length
+  const summary = [daily.length ? `${done} of ${daily.length} daily done` : null, open.length ? `${open.length} in execution` : null]
+    .filter(Boolean)
+    .join(' · ')
+  return jsxs('div', {
+    className: card,
+    children: [
+      jsxs('div', {
+        className: 'flex items-center gap-2',
+        children: [
+          jsx('div', { className: `size-2.5 rounded-full bg-[${style.color}]` }),
+          jsx('span', { className: 'text-base font-semibold', children: name }),
+          jsx('span', { className: `text-xs ${muted}`, children: summary || 'nothing here yet' })
+        ]
+      }),
+      jsxs('div', {
+        className: 'flex flex-col',
+        children: [
+          jsx(QueueLabel, { title: 'Daily', hint: 'resets every morning', onAdd: () => onDaily({ fresh: true, ladder: name }) }),
+          daily.length
+            ? daily.map(item => jsx(DailyRow, { item, actions, onEdit: onDaily }, item.id))
+            : jsx('span', { className: `text-sm py-1.5 ${muted}`, children: 'No daily actions for this domain.' })
+        ]
+      }),
+      jsxs('div', {
+        className: 'flex flex-col',
+        children: [
+          jsx(QueueLabel, { title: 'Execution', hint: 'carries over until done', onAdd: () => onExec({ fresh: true, ladder: name }) }),
+          execution.length
+            ? execution.map(item =>
+                jsx(ExecRow, { item, index: ids.indexOf(item.id), count: ids.length, actions, onEdit: onExec }, item.id)
+              )
+            : jsx('span', { className: `text-sm py-1.5 ${muted}`, children: 'Nothing in execution for this domain.' })
+        ]
+      })
+    ]
+  })
+}
+
 function TodayView({ data, actions }) {
-  const [dailyEdit, setDailyEdit] = useState(null) // null | 'new' | item
+  const [dailyEdit, setDailyEdit] = useState(null) // null | { fresh, ladder } | item
   const [execEdit, setExecEdit] = useState(null)
   const styles = data.ladders
-  const ids = data.execution.filter(x => x.status === 'open').map(x => x.id)
+  const names = Object.keys(styles)
+  const loose = x => !names.includes(x.ladder)
+  const domains = names.map(name => ({ name, style: styles[name] }))
+  if (data.daily.some(loose) || data.execution.some(loose)) domains.push({ name: '', style: { color: '#9aa4b2' } })
   return jsxs('div', {
     className: 'flex flex-col gap-4',
     children: [
-      jsxs('div', {
-        className: card,
-        children: [
-          jsx(CardHeader, { title: 'Daily queue', hint: 'the engine, resets every morning', onAdd: () => setDailyEdit('new') }),
-          data.daily.length
-            ? jsx('div', {
-                className: 'flex flex-col',
-                children: data.daily.map(item => jsx(DailyRow, { item, styles, actions, onEdit: setDailyEdit }, item.id))
-              })
-            : jsx('span', { className: `text-sm ${muted}`, children: 'No daily actions yet. Add the ones you do every day, or tell Artha.' })
-        ]
-      }),
-      jsxs('div', {
-        className: card,
-        children: [
-          jsx(CardHeader, { title: 'Execution queue', hint: 'carries over until done', onAdd: () => setExecEdit('new') }),
-          data.execution.length
-            ? jsx('div', {
-                className: 'flex flex-col',
-                children: data.execution.map(item =>
-                  jsx(ExecRow, { item, index: ids.indexOf(item.id), count: ids.length, styles, actions, onEdit: setExecEdit }, item.id)
-                )
-              })
-            : jsx('span', { className: `text-sm ${muted}`, children: 'Nothing in execution. Add the work that moves a ladder, or tell Artha.' })
-        ]
-      }),
+      ...domains.map(d =>
+        jsx(
+          DomainCard,
+          {
+            name: d.name || 'No domain',
+            style: d.style,
+            daily: data.daily.filter(x => (d.name ? x.ladder === d.name : loose(x))),
+            execution: data.execution.filter(x => (d.name ? x.ladder === d.name : loose(x))),
+            actions,
+            onDaily: setDailyEdit,
+            onExec: setExecEdit
+          },
+          d.name || 'none'
+        )
+      ),
       dailyEdit
-        ? jsx(DailyEditor, { item: dailyEdit === 'new' ? null : dailyEdit, ladders: styles, actions, onClose: () => setDailyEdit(null) })
+        ? jsx(DailyEditor, {
+            item: dailyEdit.fresh ? null : dailyEdit,
+            preset: dailyEdit.fresh ? dailyEdit.ladder : '',
+            ladders: styles,
+            actions,
+            onClose: () => setDailyEdit(null)
+          })
         : null,
       execEdit
-        ? jsx(ExecEditor, { item: execEdit === 'new' ? null : execEdit, ladders: styles, actions, onClose: () => setExecEdit(null) })
+        ? jsx(ExecEditor, {
+            item: execEdit.fresh ? null : execEdit,
+            preset: execEdit.fresh ? execEdit.ladder : '',
+            ladders: styles,
+            actions,
+            onClose: () => setExecEdit(null)
+          })
         : null
     ]
   })
