@@ -21,6 +21,9 @@ jobs:
       - name: Xcode
         run: sudo xcode-select -s "$(ls -d /Applications/Xcode_27*.app | sort -V | tail -1)"
 
+      - name: Metal toolchain
+        # Some runner images come without it ("cannot execute tool 'metal'", build 71); the sky shaders need it.
+        run: xcrun -f metal >/dev/null 2>&1 && xcrun metal -v >/dev/null 2>&1 || xcodebuild -downloadComponent MetalToolchain
       - name: Build VoryMac Debug
         run: |
           set -o pipefail
